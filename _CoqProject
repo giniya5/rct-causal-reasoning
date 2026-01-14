@@ -1,0 +1,4 @@
+-R . project
+-R frap Frap
+-R /home/giniya/.opam/infoth/lib/coq/user-contrib/infotheo infotheo
+-R /home/giniya/causal_models_formalization annacausal

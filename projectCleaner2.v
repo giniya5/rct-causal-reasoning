@@ -29,6 +29,7 @@ Section TwoVarExample deals with the graph T -> H.
 Graph O -> T -> H, O -> H (confounder)
 - doint_equiv_with_confounder_prob states that
   P[H|T,O] = P[H|do(T),O], but has the assumption
+  (Hnodefnint t) _|_ Tnodefn | Cnodefn.
   (minor gaps in proof)
 - doint_equiv_with_confounder_prob_wo_indp states
   the same thing, but now instead assumes that

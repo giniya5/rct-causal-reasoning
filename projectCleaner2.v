@@ -570,6 +570,10 @@ Lemma zero_div_zero: forall (a : R),
 Proof.
 Admitted.
 
+(* Another definition of indepedence. I wrote it because I needed
+   this for the 2 variable case, but I actually think it was already
+   defined for condition indepence in cinde_alt, and I should change
+   this to cinde_alt at some point instead. *)
 Lemma indep_then_cond_irrelevant_wcond: 
   forall (TX TY TZ: finType) (P: R.-fdist ((TY*TX)*TZ) ) (X Y Z: {RV P -> outcomes}),
   Z _|_ X | Y->
@@ -650,6 +654,14 @@ Proof.
   assumption.
 Qed.
 
+(* If we have that nodefunctions are independent, then on 
+   the graph
+   C -> T -> H, C -> H
+   we get that once we condition on C, the observational
+   and interventional probability distributions for H
+   are the same.
+   This is a precursor to the stronger theorem that instead
+   assumes the unobserved variables are mutually independent. *)
 Lemma doint_equiv_with_confounder_prob: forall t c, 
   (Hnodefnint t) _|_ Tnodefn | Cnodefn ->
   `Pr[ Cnodefn = c ] != 0 ->
@@ -760,6 +772,8 @@ Proof.
 (* Qed. *)
 Admitted.
 
+(* If the unobserved factors are independent, then the
+   nodefunctions are independent. *)
 Lemma unobv_indp_fn_indp: 
   UHRV _|_ UTRV | UCRV ->
   (forall t, (Hnodefnint t) _|_ Tnodefn | Cnodefn).
@@ -814,6 +828,11 @@ Proof.
   apply H1. *)
 Admitted.
 
+(* If we have mutual independence, then on the graph
+   C -> T -> H, C -> H
+   we get that once we condition on C, the observational
+   and interventional probability distributions for H
+   are the same. *)
 Lemma doint_equiv_with_confounder_prob_wo_indp: forall t c, 
   mutual_indep_three UHRV UTRV UCRV ->
   `Pr[ Cnodefn = c ] != 0 ->

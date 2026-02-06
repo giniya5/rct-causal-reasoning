@@ -17,34 +17,56 @@ Local Open Scope proba_scope.
 
 (*
 OUTLINE:
-Section TwoVarExample deals with the graph T -> H.
-- prob_version_wo_indp states that P[H|T] = P[H|do(T)].
+Graph T -> H (Section TwoVarExample)
+- *prob_version_wo_indp* states that P[H|T] = P[H|do(T)],
+  assuming that some probabilities are non-zero, and that
+  unobserved distributions are independent.
   In other words, under interventional treatment, and
   observation of the treatement health outcomes are the
   same (so a RCT where we assign T would be valid for
   learning the interventional probability).
-- doint_equiv is the statement of this in terms of
-  expectations instead of probabilities
-  (minor? gaps in proof)
-Graph O -> T -> H, O -> H (confounder)
+  This is basically complete, the only missing lemma is:
+  + *inde_RV_comp*, which is pulled directly from the 
+  infotheo library (and proven there), but for whatever 
+  reason I'm struggling to access it.
+- *doint_equiv_wo_indp* states that E[H|T] = E[H|do(T)] 
+  with the same assumptions as in the probability case, and 
+  also with the assumption that the function that maps the 
+  outcomes to real numbers is injective.
+  Work left:
+  + *change_to_R_version* is not proven. I'm running into
+    issues with type mismatches (realType and finType). This
+    seems like it is potentially rather difficult to fix,
+    since the type mismatch means I can't use their lemmas.
+Graph O -> T -> H, O -> H (confounder, Section ThreeVarConfounderExample)
 - doint_equiv_with_confounder_prob states that
   P[H|T,O] = P[H|do(T),O], but has the assumption
-  (Hnodefnint t) _|_ Tnodefn | Cnodefn.
-  (minor gaps in proof)
+  (Hnodefnint t) _|_ Tnodefn | Cnodefn, as well as some
+  assumptions about certain probabilities being non-zero.
+  Almost done. Work left:
+  + 2 lemmas that assert basic arithmetic facts, 
+    *zero_div_zero* and *div_num_and_denom*
 - doint_equiv_with_confounder_prob_wo_indp states
   the same thing, but now instead assumes that
-  UT, UT, UO are independent
-  (larger gaps in proof)
+  UT, UT, UO are mutually independent instead of the
+  independence assumption in the previous lemma.
+  Work left:
+  + Lots of gaps between this proof and the one above.
 Graph T -> H, T -> O <- H (collider) 
 - TBD
 Graph T -> O -> H (mediator)
 - TBD
+
 General case
 - Will be done in new file but rough sketch is here:
   Theorem:
     set Z d-separates H and T ->
     underlying variables for set Z, H, T are all mutually independent ->
     P[H|T,Z] = P[H|do(T),Z].
+  This is the general theorem that states that if we
+  satisfy the backdoor criterion, then we can use
+  observational probabilities to learn about interventional
+  probabilities.
 
   Lemma:
     underlying variables for set Z, H, T are all mutually independent ->
@@ -61,7 +83,7 @@ General case
 *)
 
 
-Section TwoVarExample.
+Section TwoVarExample. (* Graph: T -> H *)
 
 Context {R : realType}.
 Variables (UT UH : finType).
@@ -82,17 +104,16 @@ Let nodefnint (t:R) : {RV P -> R * R} :=
   fun u => (t , Hinterv u t). *)
 Let Hnodefn : {RV P -> outcomes} :=
   fun u => H u.
-(* Let Hnodefnint (t:outcomes) : {RV P -> outcomes} :=
-  fun u => Hinterv u t. *)
-Let Hnodefnint (t:outcomes) : RV_of P (Phant (UT * UH)) (Phant outcomes) :=
+Let Hnodefnint (t:outcomes) : {RV P -> outcomes} :=
   fun u => Hinterv u t.
+(* Let Hnodefnint (t:outcomes) : RV_of P (Phant (UT * UH)) (Phant outcomes) :=
+  fun u => Hinterv u t. *)
 Let Tnodefn : {RV P -> outcomes} :=  (*T.*)
   fun u => T u.
 (* Locate "'RV'".
 Print RV_of.
 Print RV. *)
 Variable fn_outcomes_R : outcomes -> R.
-(* Coercion fn_outcomes_R : outcomes >-> R. *)
 Let RHnodefn : {RV P -> R} :=
   fn_outcomes_R `o Hnodefn.
 Let RHnodefnint (t:outcomes) : {RV P -> R} :=
@@ -104,18 +125,14 @@ Let UTRV: {RV P -> UT} :=
 Let UHRV: {RV P -> UH} :=
   fun u => u.2.
 
-(* Lemma transform_fn:
-  X _|_ Y -> f(X) _|_ Y.
-  injective f? *)
-
 Lemma mult_div: forall (a b: R),
   b != 0 ->
-  a = a * b / b.
+  a * b / b = a.
 Proof.
   intros.
+  apply esym.
   rewrite <- GRing.mulrA.
   rewrite GRing.mulfV.
-  (* Check GRing.mulr1. *)
   rewrite GRing.mulr1.
   reflexivity.
   assumption.
@@ -134,6 +151,7 @@ Proof.
   reflexivity.
 Qed.
 
+(* Alternate independence definition *)
 Lemma indep_then_cond_irrelevant: 
     forall (TX: finType) (TZ: finType) (P: R.-fdist (TX*TZ) ) 
     (X: {RV P -> outcomes}) (Z: {RV P -> outcomes}),
@@ -148,10 +166,12 @@ Proof.
   rewrite H0.
   set y := `Pr[ X = x].
   assert (y != 0) by exact H1.
+  apply esym.
   apply mult_div.
   assumption.
 Qed.
 
+(* Probability lemma with stronger assumption than desired *)
 Lemma prob_version: forall t,
   P |= (Hnodefnint t) _|_ Tnodefn ->
   `Pr[ Tnodefn = t ] != 0 ->
@@ -190,7 +210,9 @@ Proof.
     reflexivity.
 Qed.
 
-(* Check inde_RV_comp. *)
+(* This lemma is in the infotheo library, but for whatever reason I 
+   can't seem to access it. I've added it in as a lemma and admitted
+   it for now rather than figuring out how to do this. *)
 Lemma inde_RV_comp (TA TB UA UB : finType) (X : {RV P -> TA}) (Y : {RV P -> TB})
     (f : TA -> UA) (g : TB -> UB) :
   P |= X _|_ Y -> P|= (f `o X) _|_ (g `o Y).
@@ -201,6 +223,8 @@ Admitted.
 by rewrite (pr_in_comp' f) (pr_in_comp' g) -inde_XY -preimsetX -pr_in_comp'.
 Qed. *)
 
+(* If the unobserved terms are independent, then the nodefns are
+   independent on the intervention graph *)
 Lemma indep_implication: forall t,
   P |= UHRV _|_ UTRV ->
   P |= (Hnodefnint t) _|_ Tnodefn.
@@ -219,6 +243,14 @@ Proof.
   apply H1.
 Qed.
 
+(* The probability lemma I want.
+   If the unobserved factors are independent, and some
+   probability isn't 0, then if we are observe T then the
+   probability is equal to if we intervene on T. We denote
+   P[H=a|do(T=t)] as P[Hint=a] since if we write out 
+   probabilities, do(T=t) change the node functions depending
+   on T, which in this case is H, but doesn't actually have an
+   extra probability associated with doing (T=t). *)
 Lemma prob_version_wo_indp: forall (t : outcomes), 
   P |= UHRV _|_ UTRV ->
   `Pr[ Tnodefn = t ] != 0 ->
@@ -380,6 +412,10 @@ Proof.
   reflexivity.
 Qed.
 
+(* The lemma says that if the probabilites match at each
+   point, then the expectations are the same. The previous
+   lemmas are helper lemmas to deal with the summations 
+   in this lemma. *)
 Lemma prob_to_exp: forall t,
   `Pr[ Tnodefn = t ] != 0 ->
   (forall a, `Pr[ RHnodefn = a | Tnodefn = t] = `Pr[ (RHnodefnint t) = a]) ->
@@ -398,6 +434,10 @@ Proof.
   reflexivity.
 Qed.
 
+(* Since for expectations I need the outcomes to be eqType
+   instead of finType, I need a lemma that lets me convert
+   between these two. RHnodefn/RHnodefnint is just Hnodefn/
+   Hnodefnint but mapped to the reals. *)
 Lemma change_to_R_version: forall t : outcomes,
   injective fn_outcomes_R ->
   P |= Hnodefnint t _|_ Tnodefn ->
@@ -413,13 +453,16 @@ Proof.
   destruct (classic  (exists a, fn_outcomes_R a = b)) as [ [a Ha] | Hnotin ].
   rewrite <- Ha.
   Check pfwd1_comp.
-  (* pose proof (pfwd1_comp (Hnodefnint t) fn_outcomes_R a H0).
-  pose proof (pfwd1_comp _ _ _ _ (Hnodefnint t) fn_outcomes_R a H0). *)
+  admit.
+  (* rewrite [in RHS] pfwd1_comp. *)
+  (* pose proof (pfwd1_comp (Hnodefnint t) a H0 fn_outcomes_R a H0). *)
+  (* pose proof (pfwd1_comp (Hnodefnint t) _ H0 fn_outcomes_R a H0). *)
+  (* pose proof (pfwd1_comp _ _ _ _ (Hnodefnint t) fn_outcomes_R a H0). *)
   (* rewrite [in RHS] pfwd1_comp. *)
   (* rewrite pfwd1_comp. *)
   rewrite cpr_eqE.
-  Check pfwd1_comp.
-  Check pr_in_comp.
+  rewrite eqr_divrMr; try assumption.
+
   (* specialize (H3 (inv fn_outcomes_R b)). *)
   (* rewrite pfwd1_comp. *)
   (* rewrite pr_in_comp in H3. *)
@@ -439,6 +482,21 @@ Proof.
   assumption.
 Qed.
 
+(* Expectation Lemma stating that if the unobserved factors
+   are independent, then the expectations with intervention
+   or observation of T are equivalent. *)
+Lemma doint_equiv_wo_assumption: forall t, (* T -> H *)
+  injective fn_outcomes_R ->
+  P |= UHRV _|_ UTRV ->
+  `Pr[ Tnodefn = t ] != 0 -> 
+  `E_[ RHnodefn | finset (Tnodefn @^-1 t) ] = `E (RHnodefnint t).
+Proof.
+  intros.
+  apply doint_equiv; try assumption.
+  apply indep_implication.
+  assumption.
+Qed.
+
 Check comp_RV.
 (* Search (_ |= _ _|_ _). *)
 (* Check inde_RV_comp. *)
@@ -455,7 +513,7 @@ End TwoVarExample.
 
 
 
-Section ThreeVarExample.
+Section ThreeVarConfounderExample. (* C -> T -> H, C -> H *)
 
 Context {R : realType}.
 
@@ -506,6 +564,12 @@ Proof.
   (* nra. *)
 Admitted.
 
+Lemma zero_div_zero: forall (a : R),
+  a != 0  ->
+  0 / a = 0.
+Proof.
+Admitted.
+
 Lemma indep_then_cond_irrelevant_wcond: 
   forall (TX TY TZ: finType) (P: R.-fdist ((TY*TX)*TZ) ) (X Y Z: {RV P -> outcomes}),
   Z _|_ X | Y->
@@ -513,11 +577,12 @@ Lemma indep_then_cond_irrelevant_wcond:
   forall x, `Pr[ X = x | Y = y ] != 0 ->
   forall z, `Pr[ Z = z | Y = y] = `Pr[ Z = z | [%X, Y] = (x, y) ].
 Proof.
+  (* Check cinde_alt. *)
   intros.
   unfold cinde_RV in H0.
   specialize (H0 z x y).
   rewrite [in RHS] cpr_eqE.
-  Check eqr_divrMr.
+  (* Check eqr_divrMr. *)
   apply eqr_divrMr in H0; cycle 1. assumption.
   rewrite <- H0.
   rewrite cpr_eqE.
@@ -574,14 +639,16 @@ Proof.
   case PBA : (`Pr[ [% B, A] = (b, a) ] == 0).
   move/eqP in PBA.
   rewrite PBA in H1.
-  (* Search (GRing.div0r). *)
-  admit.
+  pose proof (zero_div_zero `Pr[ A = a ] H0).
+  rewrite H2 in H1.
+  rewrite eq_refl in H1.
+  exact H1.
   rewrite <- PBA.
   move/eqP in PBA.
   apply/negP.
   move/eqP.
   assumption.
-Admitted.
+Qed.
 
 Lemma doint_equiv_with_confounder_prob: forall t c, 
   (Hnodefnint t) _|_ Tnodefn | Cnodefn ->
@@ -645,26 +712,106 @@ Lemma inde_RV_comp (TA TB UA UB : finType) (X : {RV P -> TA}) (Y : {RV P -> TB})
 Proof.
 Admitted. *)
 
+(* The library only seems to have mutually independent
+   events and not RV, although I'm maybe missing something. *)
 Definition mutual_indep_three {X' Y' Z': finType}
   (X : {RV P -> X'}) (Y : {RV P -> Y'}) (Z: {RV P -> Z'}) := 
   forall x y z,
   `Pr[ X = x ] * `Pr[ Y = y ] * `Pr[ Z = z ] 
-    = `Pr[ [%[% X, Y], Z] = ((x,y), z)].
+    = `Pr[ [%[% X, Y], Z] = ((x,y), z)] /\ 
+    P |= X _|_ Y /\ P |= Y _|_ Z /\ P |= X _|_ Z.
+    
+Check mutual_indeE. (* For events, will need something for RVs. *)
+(* Definition mutual_inde_RV := forall k, @kwise_inde R A I k.+1 d E. *)
 
+(* This lemma states that mutual independence gives us
+   conditional independence.
+   This lemma needs a pesky non-zero assumption, and I'm not
+   sure how to get rid of it. *)
 Lemma mut_indp_cond_indp: forall {X' Y' Z': finType}
   (X : {RV P -> X'}) (Y : {RV P -> Y'}) (Z: {RV P -> Z'}),
   mutual_indep_three X Y Z ->
+  (* (forall c', `Pr[ Z = c' ] != 0) -> *)
   X _|_ Y | Z.
 Proof.
+  intros.
+  unfold mutual_indep_three in H0.
+  unfold cinde_RV.
+  intros.
+  (* specialize (H1 c). *)
+  specialize (H0 a b c).
+  destruct H0 as [Indp3 [IndpXY [IndpYZ IndpXZ]]].
+  unfold inde_RV in IndpXY.
+  unfold inde_RV in IndpXZ.
+  unfold inde_RV in IndpYZ.
+  specialize (IndpXY a b).
+  specialize (IndpXZ a c).
+  specialize (IndpYZ b c).
+  rewrite !cpr_eqE.
+  rewrite IndpYZ.
+  rewrite IndpXZ.
+  rewrite mult_div.
+  rewrite mult_div.
+  rewrite eqr_divrMr.
+  rewrite Indp3.
+  reflexivity.
+  (* all: assumption. *)
+  all: admit.
+(* Qed. *)
 Admitted.
-
-Check mutual_indeE. (* For events, will need something for RVs. *)
-(* Definition mutual_inde_RV := forall k, @kwise_inde R A I k.+1 d E. *)
 
 Lemma unobv_indp_fn_indp: 
   UHRV _|_ UTRV | UCRV ->
   (forall t, (Hnodefnint t) _|_ Tnodefn | Cnodefn).
 Proof.
+  intros.
+  (* rewrite cinde_alt.
+  unfold cinde_RV.
+  intros.
+  unfold Hnodefnint.
+  unfold Hinterv.
+  unfold Tnodefn.
+  unfold T.
+  unfold Cnodefn.
+  unfold C.
+  Check inde_RV_comp.
+  unfold cinde_RV in H0.
+
+  rewrite !pfwd1E /Pr.
+  apply: eq_bigl=> a.
+  rewrite !inE.
+  rewrite xpair_eqE.
+  rewrite xpair_eqE.
+  rewrite xpair_eqE.
+  rewrite xpair_eqE.
+  case Hc : (fC a.1.1 == c).
+  - move/eqP : Hc => Hc.
+    rewrite Hc.
+    case Ht : (fT a.1.2 c == t).
+    + move/eqP : Ht => Ht.
+      rewrite Ht.
+      reflexivity.
+    + rewrite !andbF.
+    reflexivity.
+  - rewrite !andbF.
+    reflexivity.
+  apply cond_then_joint_zero; assumption.
+
+
+  pose proof (inde_RV_comp ()).
+
+  intros.
+  unfold Hnodefnint.
+  unfold Hinterv.
+  unfold Tnodefn.
+  unfold T.
+  (* apply inde_RV_comp. *)
+  (* Check (Hnodefnint t). *)
+  pose proof (inde_RV_comp UH UT _ _ UHRV UTRV (fun u => fH u t) (fun u => fT u) H0).
+  unfold comp_RV in H1. 
+  unfold UTRV in H1.
+  unfold UHRV in H1.
+  apply H1. *)
 Admitted.
 
 Lemma doint_equiv_with_confounder_prob_wo_indp: forall t c, 
@@ -690,12 +837,12 @@ Proof.
 Admitted. *)
 
 
-End ThreeVarExample.
+End ThreeVarConfounderExample.
 
 
 Section BackdoorAdjustment.
 
-Lemma doint_prob:
+(* Lemma doint_prob: *)
   
 
 End BackdoorAdjustment.

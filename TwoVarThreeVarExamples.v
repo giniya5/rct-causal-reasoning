@@ -53,10 +53,7 @@ Graph O -> T -> H, O -> H (confounder, Section ThreeVarConfounderExample)
   Work left:
   + Lots of gaps between this proof and the one above.
 Graph T -> H, T -> O <- H (collider) 
-- TBD
-- I think this section will change literally nothing from T->H,
-  since a collidor doesn't affect T or H's node functions, so
-  it's maybe not worth doing...
+- Done
 Graph T -> O -> H, T -> H (mediator, Section ThreeVarColliderExample)
 - Done
 General case
@@ -83,30 +80,6 @@ General case
     P[Z] != 0 -> P [T|Z] != 0 ->
     P [H | Z] = P [H | T, Z].
 *)
-
-Section InInfoTheoLibrary.
-
-(* This lemma is in the infotheo library, but for whatever reason I 
-   can't seem to access it. I've added it in as a lemma and admitted
-   it for now rather than figuring out how to do this. *)
-
-Context {R : realType}.
-Variables (A : finType) (P : R.-fdist A).
-
-Check inde_RV_comp.
-
-(* Lemma inde_RV_comp (TA TB UA UB : finType) (X : {RV P -> TA}) (Y : {RV P -> TB})
-    (f : TA -> UA) (g : TB -> UB) :
-  P |= X _|_ Y -> P|= (f `o X) _|_ (g `o Y).
-Proof.
-  (* Check (f `o X). *)
-Admitted. *)
-(* move=> /inde_RVP inde_XY; apply/inde_RVP => E F.
-by rewrite (pr_in_comp' f) (pr_in_comp' g) -inde_XY -preimsetX -pr_in_comp'.
-Qed. *)
-
-End InInfoTheoLibrary.
-
 
 Section TwoVarExample. (* Graph: T -> H *)
 
@@ -168,8 +141,6 @@ Lemma div_mult: forall (a b: R),
   a / b * b = a.
 Proof.
   intros.
-  (* Check eqr_divrMr. 
-  Search (?x = ?y -> ?y = ?x). *)
   apply esym.
   eapply eqr_divrMr.
   assumption.
@@ -276,32 +247,7 @@ Proof.
   assumption.
 Qed.
 
-(* Lemma inde_RVP : forall (A' : finType) (P' : R.-fdist A') (TA' TB': finType)
-  (X' : {RV P' -> TA'}) (Y' : {RV P' -> TB'}),
-  P' |= X' _|_ Y' <-> forall E' F',
-  `Pr[ [% X', Y'] \in E' `* F'] = `Pr[ X' \in E' ] * `Pr[ Y' \in F' ].
-Proof.
-Admitted.
-
-Lemma inde_RV_comp_generalized (TA TB : finType) (X : {RV P -> TA}) (Y : {RV P -> TB})
-    (f : TA -> R) (g : TB -> R) :
-  P |= X _|_ Y -> P|= (f `o X) _|_ (g `o Y).
-Proof.
-  move => inde_XY.
-  pose proof (inde_RVP _ P _ _ X Y).
-  rewrite H0 in inde_XY.
-  Check ((UT*UH)%type).
-  (* Check (UT * UH). *)
-  Check pr_in_comp'.
-  (* Check pr_in_comp_image. *)
-  Check pfwd1_comp.
-  Check pr_in_comp.
-  (* pose proof (pr_in_comp' f). (prod UT UH) P _ _ f X _).
-  Check preimsetX.
-  rewrite (pr_in_comp' f). *)
-
-Admitted. *)
-
+(* Helper lemma without much intrinsic meaning. *)
 Lemma prob_as_sum_of_eq: forall t, 
   (forall a, `Pr[ RHnodefn = a | Tnodefn = t ] = `Pr[ (RHnodefnint t) = a]) ->
   `E (RHnodefnint t) = \sum_(r <- fin_img (A:=(UT * UH)%type) (B:=R) (RHnodefnint t)) 
@@ -318,6 +264,7 @@ Proof.
   reflexivity.
 Qed.
 
+(* Helper lemma without much intrinsic meaning. *)
 Lemma same_preimg_helper_int_general: forall t, 
   `Pr[ Tnodefn = t ] != 0 ->
   (forall a : R, `Pr[ RHnodefn = a | Tnodefn = t ] = `Pr[ (RHnodefnint t) = a ]) ->
@@ -340,6 +287,7 @@ Proof.
   assumption.
 Qed.
 
+(* Helper lemma without much intrinsic meaning. *)
 Lemma same_preimg_helper_noint_general: forall t, 
   (forall a : R, `Pr[ RHnodefn = a | Tnodefn = t ] = `Pr[ (RHnodefnint t) = a ]) ->
   \sum_(i <- fin_img (A:=(UT * UH)%type) (B:=R) RHnodefn | i
@@ -356,6 +304,8 @@ Proof.
   reflexivity.
 Qed.
 
+(* Helper lemma.
+   fin_img is a set with no repeated elements. *)
 Lemma fin_img_uniq: forall f1,
   uniq (fin_img (A:=(UT * UH)%type) (B:=R) f1).
 Proof.
@@ -364,6 +314,11 @@ Proof.
   apply undup_uniq.
 Qed.
 
+(* Helper lemma.
+   Given two sets without repeats ordering based on one
+   and conditioning on the other results in the same set
+   of elements regradless of which you pick for ordering
+   vs conditioning. *)
 Lemma seq_cond_or_cond_seq: forall (A B : seq R),
   uniq A ->
   uniq B ->
@@ -381,6 +336,7 @@ Proof.
     apply Bool.andb_comm.
 Qed.
 
+(* Helper lemma without much intrinsic meaning. *)
 Lemma sums_with_diff_index_forms: forall t (f1 f2 : {RV (P) -> (R)}),
   \sum_(i <- fin_img (A:=(UT * UH)%type) (B:=R) f1 | i \in fin_img (A:=(UT * UH)%type) (B:=R) f2) i * `Pr[ RHnodefn = i | Tnodefn = t ] = 
   \sum_(i <- fin_img (A:=(UT * UH)%type) (B:=R) f2 | i \in fin_img (A:=(UT * UH)%type) (B:=R) f1) i * `Pr[ RHnodefn = i | Tnodefn = t ].
@@ -403,6 +359,8 @@ Proof.
   apply fin_img_uniq.
 Qed. 
 
+(* Helper lemma without much intrinsic meaning. 
+   (Rewrite what we are summing over.) *)
 Lemma sums_with_int_and_noint_index: forall t, 
   `Pr[ Tnodefn = t ] != 0 ->
   (forall a, `Pr[ RHnodefn = a | Tnodefn = t ] = `Pr[ (RHnodefnint t) = a ]) ->
@@ -447,7 +405,8 @@ Proof.
   reflexivity.
 Qed.
 
-(* Since for expectations I need the outcomes to be eqType
+(* EXPECATIONS.
+   Since for expectations I need the outcomes to be eqType
    instead of finType, I need a lemma that lets me convert
    between these two. RHnodefn/RHnodefnint is just Hnodefn/
    Hnodefnint but mapped to the reals. *)
@@ -481,6 +440,11 @@ Proof.
   (* rewrite pr_in_comp in H3. *)
 Admitted.
 
+(* EXPECTATIONS.
+   Same lemma as before except for expectations instead
+   of probabilities. 
+   Says that given indp node fns, the interventional and
+   observational expectations are the same. *)
 Lemma doint_equiv: forall t, (* T -> H *)
   injective fn_outcomes_R ->
   P |= (Hnodefnint t) _|_ Tnodefn ->
@@ -495,7 +459,8 @@ Proof.
   assumption.
 Qed.
 
-(* Expectation Lemma stating that if the unobserved factors
+(* EXPECTATIONS.
+   Expectation Lemma stating that if the unobserved factors
    are independent, then the expectations with intervention
    or observation of T are equivalent. *)
 Lemma doint_equiv_wo_assumption: forall t, (* T -> H *)
@@ -510,17 +475,7 @@ Proof.
   assumption.
 Qed.
 
-Check comp_RV.
-(* Search (_ |= _ _|_ _). *)
-(* Check inde_RV_comp. *)
-(* Check inde_RVP. *)
-
 End TwoVarExample.
-
-
-
-
-
 
 
 
@@ -595,6 +550,10 @@ Proof.
   intros.
 Admitted.
 
+(* Important Lemma that says that if the thing you're
+   conditioning on in a probability is 0, the entire 
+   conditional probability is zero. Is used to deal
+   with annyoing P[Z=b] != 0 cases throughout proofs. *)
 Lemma cpr_eq0_denom: forall {TA TD: finType}
   (X : {RV P -> TA}) (Z: {RV P -> TD}) a b,
   `Pr[Z = b] = 0 ->
@@ -659,43 +618,16 @@ Proof.
   unfold cinde_RV in H0.
   specialize (H0 z x y).
   rewrite [in RHS] cpr_eqE.
-  (* Check eqr_divrMr. *)
   apply eqr_divrMr in H0; cycle 1. assumption.
   rewrite <- H0.
   rewrite cpr_eqE.
   rewrite cpr_eqE.
   rewrite pfwd1_pairA.
-  (* Check (`Pr[ [% Z, X, Y] = (z, x, y) ]). *)
   set `Pr[ [% Z, X, Y] = (z, x, y) ] as Pxyz.
   rewrite div_num_and_denom.
   reflexivity.
   assumption.
   assumption.
-  (* Check (`Pr[ Y = y ]). *)
-
-  (* Search (_ / (_ / _)). *)
-  (* rewrite pfwd1_pairAC. *)
-  (* rewrite [in (`Pr[ [% X, Y] = (x, y) ])] pfwd1_pairC. *)
-  (* rewrite /swap. *)
-  (* simpl. *)
-
-
-
-  (* rewrite GRing.commrV. *)
-  (* Check GRing.mulVr. *)
-  (* rewrite GRing.mulf_div.
-  Search (_ / _ * _).
-  info_eauto.
-  rewrite GRing.mulrA.
-  Check GRing.mulrA.
-  rewrite pfwd1_pairC with (TY := X) (TX := Y).
-  Check fdistX_RV2.
-  Check fdistA_RV3.
-  (* rewrite fdistX_RV2. *)
-  set y := `Pr[ X = x].
-  assert (y != 0) by exact H1.
-  apply mult_div.
-  assumption. *)
 Qed.
 
 (* Lemma prob_cond_simplify: forall h t c,
@@ -743,6 +675,10 @@ Lemma doint_equiv_with_confounder_prob: forall t c,
       = `Pr[ (Hnodefnint t) = h | Cnodefn = c ]).
 Proof.
   intros.
+  (* Check cinde_alt.
+  assert (`Pr[ [% Tnodefn, Cnodefn] = (t, c)] != 0).
+    admit.
+  pose proof (cinde_alt c H0 H3). *)
   pose proof (indep_then_cond_irrelevant_wcond UT UC UH P 
       Tnodefn Cnodefn (Hnodefnint t) H0 c H1 t H2 h).
   rewrite H3.
@@ -789,13 +725,6 @@ Proof.
     reflexivity.
   apply cond_then_joint_zero; assumption.
 Qed.
-
-(* Check inde_RV_comp.
-Lemma inde_RV_comp (TA TB UA UB : finType) (X : {RV P -> TA}) (Y : {RV P -> TB})
-    (f : TA -> UA) (g : TB -> UB) :
-  P |= X _|_ Y -> P|= (f `o X) _|_ (g `o Y).
-Proof.
-Admitted. *)
 
 (* The library only seems to have mutually independent
    events and not RV, although I'm maybe missing something. *)
@@ -851,15 +780,9 @@ Proof.
 (* Qed. *)
 Qed.
 
-(* Lemma inde_RV_comp_cond (TA TB TD UA UB UD : finType) 
-  (X : {RV P -> TA}) (Y : {RV P -> TB}) (Z : {RV P -> TD})
-    (f : TA -> UA) (g : TB -> UB) (h : TD -> UD) :
-  X _|_ Y | Z -> (f `o X) _|_ (g `o Y) | (h `o Z).
-  (* What I really want to conclude is that f and g are allowed
-  to use Z as well as an input to their functions*)
-Proof.
-Admitted. *)
-
+(* Lemma that states that if there is no value d such
+   that h d = z, then we also know that the RV h `o Z
+   can also never be z. *)
 Lemma no_fn_val_prob_zero : forall {TD UD : finType}
   (Z: {RV P -> TD}) (h : TD -> UD) z,
   ~ (exists d : TD, h d = z) ->
@@ -879,18 +802,10 @@ Proof.
     rewrite Hhoz.
     reflexivity.
   contradiction.
-Qed.
+Qed. 
 
-Lemma fox_in_paired_RV1 : 
-  forall {TA TB TD UA: finType}
-  (X : {RV P -> TA}) (Y : {RV P -> TB}) (Z: {RV P -> TD})
-  (f : TA -> UA) x fx y z,
-  `Pr[ X = x ] = `Pr[(f `o X) = fx ] ->
-  `Pr[ [% f `o X, Y, Z] = (fx, y, z) ] = 
-      `Pr[ [% X, Y, Z] = (x, y, z) ].
-Proof.
-Admitted.
-
+(* REDUNDANT.
+   Says that three mutually indp events are still indp*)
 Lemma mut_indp_fn :
   forall {TA TB TD UA UB UD : finType}
   (X : {RV P -> TA}) (Y : {RV P -> TB}) (Z: {RV P -> TD})

@@ -1,3 +1,6 @@
 [submodule "frap"]
 	path = frap
 	url = https://github.com/achlipala/frap.git
+[submodule "causal_models_formalization"]
+	path = causal_models_formalization
+	url = https://github.com/annazhang03/causal_models_formalization.git

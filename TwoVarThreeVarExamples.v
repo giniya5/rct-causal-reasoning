@@ -2532,6 +2532,19 @@ Proof.
   assumption.
 Qed.
 
+(* If we want H and T to be d-sep, we should have
+   actually been conditioning on C... Why did the 
+   previous one work? *)
+Lemma doint_mediator': forall t c,
+  mutual_indep_three UC UH UT P UHRV UTRV UCRV ->
+  `Pr[ Cnodefn = c ] != 0 ->
+  `Pr[ Tnodefn = t | Cnodefn = c ] != 0 ->
+  (forall h, `Pr[ Hnodefn = h | [% Tnodefn, Cnodefn] = (t, c) ] 
+      = `Pr[ (Hnodefnint t) = h | Cnodefn = c ]).
+Proof.
+  intros.
+Admitted.
+
 
 End ThreeVarMediatorExample.
 
@@ -2660,6 +2673,119 @@ Proof.
 Qed.
 
 End ThreeVarColliderExample.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Section FourVarConfounderExample.
+(* Graph :  C <- C' -> H
+            T <- C -> H
+               T -> H *)
+
+
+Context {R : realType}.
+
+Variables (UT UH UC UE : finType).
+Variable P : R.-fdist (((UE * UC) * UT) * UH).
+Variable outcomes: finType.
+
+Variable fE : UE -> outcomes.
+Variable fC : UC -> outcomes -> outcomes.
+Variable fT : UT -> outcomes -> outcomes.
+Variable fH : UH -> outcomes -> outcomes -> outcomes -> outcomes.
+
+Let E (p: UE * UC * UT * UH) : outcomes :=
+  fE p.1.1.1.
+Let C (p: UE * UC * UT * UH) : outcomes :=
+  fC p.1.1.2 (E p).
+Let T (p : UE * UC * UT * UH ): outcomes :=
+  fT p.1.2 (C p).
+Let H (p : UE * UC * UT * UH) : outcomes :=
+  fH p.2 (E p) (C p) (T p).
+Let Hinterv (p : UE * UC * UT * UH) t : outcomes :=
+  fH p.2 (E p) (C p) t.  
+
+Let Enodefn : {RV P -> outcomes} :=
+  fun u => E u.
+Let Cnodefn : {RV P -> outcomes} :=
+  fun u => C u.
+Let Tnodefn : {RV P -> outcomes} :=
+  fun u => T u.
+Let Hnodefn : {RV P -> outcomes} :=
+  fun u => H u.
+Let Hnodefnint (t: outcomes) : {RV P -> outcomes}:= 
+  fun u => Hinterv u t.
+
+Let UTRV: {RV P -> UT} :=
+  fun u => u.1.2.
+Let UHRV: {RV P -> UH} :=
+  fun u => u.2.
+Let UCRV: {RV P -> UC} :=
+  fun u => u.1.1.2.
+Let UERV: {RV P -> UE} :=
+  fun u => u.1.1.1.
+
+Lemma doint_equiv_with_two_confounder_prob: forall t c, 
+  (Hnodefnint t) _|_ Tnodefn | Cnodefn ->
+  `Pr[ [% Tnodefn, Cnodefn] = (t, c) ] != 0 ->
+  (forall h, `Pr[ Hnodefn = h | [% Tnodefn, Cnodefn] = (t, c) ] 
+      = `Pr[ (Hnodefnint t) = h | Cnodefn = c ]).
+Proof.
+  intros.
+  Check cinde_alt.
+  rewrite <- cinde_alt with (b := t) (Y := Tnodefn); try assumption.
+  rewrite cpr_eqE.
+  rewrite cpr_eqE.
+  eapply eqr_divrMr.
+  assumption.
+  rewrite div_mult.
+  unfold Hnodefn.
+  unfold H.
+  unfold Tnodefn.
+  unfold T.
+  unfold Cnodefn.
+  unfold Hnodefnint.
+  unfold Hinterv.
+  unfold C.
+  unfold Tnodefn in H1.
+  unfold T in H1.
+
+  rewrite !pfwd1E /Pr.
+  apply: eq_bigl=> a.
+  rewrite !inE.
+  rewrite xpair_eqE.
+  rewrite xpair_eqE.
+  rewrite xpair_eqE.
+  rewrite xpair_eqE.
+  case Hc : (fC a.1.1.2 (E a) == c).
+  - move/eqP : Hc => Hc.
+    rewrite Hc.
+    case Ht : (fT a.1.2 c == t).
+    + move/eqP : Ht => Ht.
+      rewrite Ht.
+      reflexivity.
+    + rewrite !andbF.
+      reflexivity.
+  - rewrite !andbF.
+    reflexivity.
+  assumption.
+Qed.
+
+End FourVarConfounderExample.
 
 
 

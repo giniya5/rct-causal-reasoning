@@ -28,10 +28,19 @@ Variables (outcomesE : finType).
 Variable P : R.-fdist (U).
 
 Variable H : {RV P -> outcomesH}.
+    (* Variable being measured *)
 Variable T : {RV P -> outcomesT}.
+    (* Variable being intervened/conditioned on *)
 Variable paT : {RV P -> outcomesPaT}.
+    (* Set of parents of variable T *)
 Variable Z : {RV P -> outcomesZ}.
+    (* Set Z that satisfies the backdoor criterion with T->H.
+      Note that Z overlaps with E and paT. *)
 Variable E : {RV P -> outcomesE}.
+    (* Set E, which is all variables in the graph except for 
+      T, H and paT. *)
+(* Realtionships in the graph:
+    paT_i -> T, T -> H, H ... Z_i ... -> T *)
 
 Variable Hinterv : outcomesT -> {RV P -> outcomesH}.
 Variable Tinterv : outcomesT -> {RV P -> outcomesT}.
@@ -87,6 +96,11 @@ Lemma mult_zero_right: forall (a : R),
 Proof.
 Admitted.
 
+Lemma mult_zero_left: forall (a : R),
+  0 * a = 0.
+Proof.
+Admitted.
+
 Lemma div_div: forall (a b c : R),
   a / (b / c) = a / b * c.
 Proof.
@@ -136,6 +150,29 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma pair_to_single_non_zero: forall {A B : finType} (X : {RV P -> A}) 
+  (Y : {RV P -> B}) x y,
+  `Pr[ [% X, Y] = (x, y) ] != 0 ->
+  `Pr[ X = x ] != 0.
+Proof.
+  intros.
+  Check pfwd1_domin_RV2.
+  have [Hzero | Hnonzero] := boolP (`Pr[X = x] == 0).
+  move/eqP: Hzero => Hzero.
+  apply pfwd1_domin_RV2 with (TX := X) (TY := Y) (b := y) in Hzero.
+  rewrite Hzero in H0.
+
+  exfalso.
+  (* apply H0.
+  reflexivity.
+
+  Search ( _ != _ ).
+  rewrite <- contra.Internals.eqType_neqP in H0. *)
+  admit.
+
+  exact is_true_true.
+Admitted.
+
 Lemma indep_to_equality: forall {A B C : finType} (X : {RV P -> A}) (Y : {RV P -> B})
   (W : {RV P -> C}) x y w,
   X _|_ Y | W ->
@@ -150,6 +187,7 @@ Proof.
   assumption.
 Qed.
 
+(* Needed for infotheo libaray's total_prob and total_prob_cond lemmas *)
 Lemma disjoint_true: forall {C: finType} (W : {RV (P) -> C}), 
   (forall i j : C,
   i != j ->
@@ -178,6 +216,7 @@ Proof.
   exact H0.
 Qed.
 
+(* Needed for infotheo libaray's total_prob and total_prob_cond lemmas *)
 Lemma cover_true: forall {C: finType} (W : {RV (P) -> C}),
   cover [set finset (T:=U) (preim W (pred1 i)) | i : C] = [set: U].
 Proof.
@@ -290,10 +329,21 @@ Lemma rearrange_brackets: forall {A B C D : finType} (X : {RV P -> A}) (Y : {RV 
 Proof.
 Admitted.
 
+Lemma pair_to_single_non_zero_specialized: 
+  (forall (i0 : outcomesPaT) (i1 : outcomesZ) (i2 : outcomesT), 
+      `Pr[ [% paT, [% T, Z]] = (i0, (i2, i1)) ] != 0) ->
+  (forall (i0 : outcomesPaT) (i1 : outcomesT),
+      `Pr[ [% T, paT] = (i1, i0) ] != 0).
+Proof.
+  intros.
+  (* specialize (H0 i0 i1).
+  Check pfwd1_domin_RV2. *)
+Admitted.
+
 Lemma use_indep_statements: forall h t, 
   Z _|_ T | paT ->
   H _|_ paT | [% T, Z] ->
-  (forall i0 i1, `Pr[ [% T, paT] = (i1, i0) ] != 0) ->
+  (* (forall i0 i1, `Pr[ [% T, paT] = (i1, i0) ] != 0) -> *)
   (forall i0 i1 i2, `Pr[ [% paT, [% T, Z]] = (i0, (i2, i1)) ] != 0) ->
   \sum_(i in outcomesZ) \sum_(u in outcomesPaT)
       `Pr[ H = h | [% T, Z] = (t, i) ] * `Pr[ Z = i | paT = u ] * `Pr[ paT = u ] = 
@@ -307,10 +357,11 @@ Proof.
   apply eq_bigr.
   intros.
   apply mult_both_sides_r.
-  specialize (H2 i0 t).
-  pose proof (indep_to_equality _ _ _ i t i0 H0 H2).
-  specialize (H3 i0 i t).
-  pose proof (indep_to_equality _ _ _ h i0 (t, i) H1 H3).
+  pose proof (pair_to_single_non_zero_specialized H2).
+  specialize (H5 i0 t).
+  pose proof (indep_to_equality _ _ _ i t i0 H0 H5).
+  specialize (H2 i0 i t).
+  pose proof (indep_to_equality _ _ _ h i0 (t, i) H1 H2).
   (* apply indep_to_equality with (x := i) (y := t) (w := i0) in H0.
   apply indep_to_equality with (x := h) (y := i0) (w := (t, i)) in H1. *)
   rewrite H6.
@@ -318,12 +369,61 @@ Proof.
   reflexivity.
 Qed.
 
+(* Absolutely not proven, and idk if it is proveable. Trying to remove the condition
+    where we need the equation to be non-zero at all values. *)
+Lemma use_indep_statements_get_rid_of_zero: forall h t, 
+  Z _|_ T | paT ->
+  H _|_ paT | [% T, Z] ->
+  \sum_(i in outcomesZ) \sum_(u in outcomesPaT)
+      `Pr[ H = h | [% T, Z] = (t, i) ] * `Pr[ Z = i | paT = u ] * `Pr[ paT = u ] = 
+  \sum_(i in outcomesZ) \sum_(u in outcomesPaT)
+      `Pr[ H = h | [% T, Z, paT] = (t, i, u) ] * `Pr[ Z = i | [% paT, T] = (u, t) ] 
+      * `Pr[ paT = u ].
+Proof.
+  intros.
+  apply eq_bigr.
+  intros.
+  apply eq_bigr.
+  intros.
+  apply mult_both_sides_r.
 
+  have [Hzero | Hnonzero] := boolP (`Pr[ [% paT, [% T, Z]] = (i0, (t, i)) ] == 0).
+      move/eqP: Hzero => Hzero.
+      assert (`Pr[ H = h | [% T, Z, paT] = (t, i, i0) ] = 0 ).
+        admit.
+      rewrite H4.
+      rewrite mult_zero_left.
+      have [Hzero' | Hnonzero' ] := boolP (`Pr[ paT = i0 ] == 0).
+        move/eqP: Hzero' => Hzero'.
+        rewrite cpr_eq0_denom; try assumption.
+        rewrite mult_zero_right.
+        reflexivity.
+
+        assert (`Pr[ [% T, Z] = (t, i) ] = 0).
+          unfold cinde_RV in H0.
+          specialize (H0 i t i0).
+
+          admit.
+        rewrite -> cpr_eq0_denom with (Y := [%T, Z]); try assumption.
+        rewrite mult_zero_left.
+        reflexivity.
+      
+  apply use_indep_statements; try assumption.  
+Admitted.
+
+(* Lemma saying that it the parental adjustment formula, some
+    independence statements, and a non-zero statement is true,
+    THEN the backdoor adjustment formula holds. 
+    Notes: the non-zero condition feels like it could maybe be 
+      removed/isn't a great assumption to be making? Could it
+      be an artifact of the way we write Hinterv vs H|T? *)
 Lemma parental_to_cond: forall h t,
   `Pr[(Hinterv t) = h] = \sum_(u in outcomesPaT) 
       `Pr[ H = h | [% T, paT] = (t, u)] * `Pr[paT=u] ->
   T _|_ Z | paT ->
   H _|_ paT | [% T, Z] ->
+  (forall (i0 : outcomesPaT) (i1 : outcomesZ) (i2 : outcomesT), 
+      `Pr[ [% paT, [% T, Z]] = (i0, (i2, i1)) ] != 0) ->
   `Pr[(Hinterv t) = h] = \sum_(z in outcomesZ) 
       `Pr[ H = h | [% T, Z] = (t, z)] * `Pr[Z=z].
 Proof. 
@@ -339,8 +439,8 @@ Proof.
   rewrite -> eq_bigr with (F2 := fun z => `Pr[ H = h | [% T, Z] = (t, z) ] *
       (\sum_(u in outcomesPaT) `Pr[ Z = z | paT = u ] * `Pr[ paT = u ])); cycle 1.
     intros.
-    specialize (H3 i).
-    apply H3.
+    specialize (H4 i).
+    apply H4.
   assert (\sum_(i in outcomesZ) `Pr[ H = h | [% T, Z] = (t, i) ] * 
       (\sum_(u in outcomesPaT) `Pr[ Z = i | paT = u ] * `Pr[ paT = u ]) =
       \sum_(i in outcomesZ) (\sum_(u in outcomesPaT) 
@@ -353,9 +453,10 @@ Proof.
     intros.
     rewrite GRing.mulrA.
     reflexivity.
-  rewrite H4.
+  rewrite H5.
   rewrite use_indep_statements; cycle 1.
     apply cinde_RV_sym.
+    assumption.
     assumption.
     assumption.
   rewrite exchange_big.
@@ -397,11 +498,15 @@ Lemma parental: forall h t pa e,
       `Pr[ H=h | [% T, paT] = (t, u)] * `Pr[paT=u]. *)
 
 
+(* Lemma proving the parental adjustment formula is true, 
+    given some starting equation. The starting equation comes
+    from Markov factorizations, but we aren't working with 
+    Markov factorizations to avoid having to work with paT and
+    E as sets. *)
 Lemma parental: forall h t,
   (forall pa e,
     `Pr[ [% (Hinterv t), (paTinterv t), (Einterv t)] = (h, pa, e) ] 
         = `Pr[ [% H, T, paT, E] = (h, t, pa, e) ] / `Pr[ T = t | paT = pa ]) ->
-  (* `Pr[(Tinterv t) = t] = 1 -> *)
   `Pr[(Hinterv t) = h] = \sum_(u in outcomesPaT) 
       `Pr[ H=h | [% T, paT] = (t, u)] * `Pr[paT=u].
 Proof.
@@ -442,13 +547,17 @@ Proof.
   reflexivity.
 Qed.
 
-
+(* Given Markov factorization equation,
+        independence statements,
+        non-zero statment,
+    THEN the backdoor adjustment formula is true. *)
 Lemma markov_indp_backdoor: forall t h,
   (forall pa e,
   `Pr[ [% (Hinterv t), (paTinterv t), (Einterv t)] = (h, pa, e) ] 
       = `Pr[ [% H, T, paT, E] = (h, t, pa, e) ] / `Pr[ T = t | paT = pa ]) ->
   T _|_ Z | paT ->
   H _|_ paT | [% T, Z] ->
+  (forall i0 i1 i2, `Pr[ [% paT, [% T, Z]] = (i0, (i2, i1)) ] != 0) ->
   `Pr[(Hinterv t) = h] = \sum_(z in outcomesZ) 
       `Pr[ H = h | [% T, Z] = (t, z)] * `Pr[Z=z].
 Proof.

@@ -20,11 +20,19 @@ Section ParentalAdjustmentFormula.
 
 Context {R : realType}.
 Variables (U : finType).
+    (* Set of all unobserved terms -- tuple *)
 Variables (outcomesH : finType).
+    (* Outcomes of node H *)
 Variables (outcomesT : finType).
+    (* Outcomes of node T *)
 Variables (outcomesPaT : finType).
+    (* Outcomes of nodes parents(T) -- tuple *)
 Variables (outcomesZ : finType).
+    (* Outcomes of nodes Z, those used for backdoor 
+        criterion -- tuple *)
 Variables (outcomesE : finType).
+    (* Outcomes of node E, which is all nodes in the graph 
+      except for T, H, paT -- tuple *)
 Variable P : R.-fdist (U).
 
 Variable H : {RV P -> outcomesH}.
@@ -42,11 +50,25 @@ Variable E : {RV P -> outcomesE}.
 (* Realtionships in the graph:
     paT_i -> T, T -> H, H ... Z_i ... -> T *)
 
+(* All of the node functions under intervention. Take a value
+  of type outcomesT, the interventional value of T=t, and
+  output a RV. (Tinterv is defined but did not end up getting 
+  used, and would be 1 if T=t, 0 if T!=t. So could be 
+  explicitly defined instead of just being a variable.)*)
 Variable Hinterv : outcomesT -> {RV P -> outcomesH}.
 Variable Tinterv : outcomesT -> {RV P -> outcomesT}.
 Variable paTinterv : outcomesT -> {RV P -> outcomesPaT}.
 Variable Zinterv : outcomesT -> {RV P -> outcomesZ}.
 Variable Einterv : outcomesT -> {RV P -> outcomesE}.
+
+(* Let Tinterv (t: outcomesT) : {RV P -> outcomesT} :=
+  fun t => 
+  match t  *)
+
+
+(*  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                        SECTION : MATH LEMMAS 
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  *)
 
 Lemma mult_both_sides_r: forall (a b c : R),
   (* c != 0 -> *)
@@ -105,6 +127,10 @@ Lemma div_div: forall (a b c : R),
   a / (b / c) = a / b * c.
 Proof.
 Admitted.
+
+(*  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                  SECTION : SIMPLE PROBABILITY LEMMAS 
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  *)
 
 Lemma cpr_eq0_denom: forall {TA TD: finType}
   (X : {RV P -> TA}) (Y: {RV P -> TD}) a b,
@@ -329,6 +355,29 @@ Lemma rearrange_brackets: forall {A B C D : finType} (X : {RV P -> A}) (Y : {RV 
 Proof.
 Admitted.
 
+Lemma pair_to_single_non_zero_left: forall {A B : finType} 
+  (X : {RV P -> A}) (Y : {RV P -> B}) x y,
+  (forall (i0 : outcomesPaT) (i1 : outcomesZ) (i2 : outcomesT), 
+      `Pr[ [% X, Y] = (x, y) ] != 0) ->
+  (forall (i0 : outcomesPaT) (i1 : outcomesT),
+      `Pr[ X = x ] != 0).
+Proof.
+Admitted.
+
+Lemma pair_to_single_non_zero_right: forall {A B : finType} 
+  (X : {RV P -> A}) (Y : {RV P -> B}) x y,
+  (forall (i0 : outcomesPaT) (i1 : outcomesZ) (i2 : outcomesT), 
+      `Pr[ [% X, Y] = (x, y) ] != 0) ->
+  (forall (i0 : outcomesPaT) (i1 : outcomesT),
+      `Pr[ Y = y ] != 0).
+Proof.
+Admitted.
+
+(*  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                SECTION : Parental Adjustment Formula ->
+                    Backdoor Adjustment Formula
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  *)
+
 Lemma pair_to_single_non_zero_specialized: 
   (forall (i0 : outcomesPaT) (i1 : outcomesZ) (i2 : outcomesT), 
       `Pr[ [% paT, [% T, Z]] = (i0, (i2, i1)) ] != 0) ->
@@ -480,6 +529,11 @@ Proof.
   apply rearrange_cond.
 Qed.
 
+
+(*  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                SECTION : Parental Adjustment Formula
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  *)
+
 (* Lemma temp: forall t h,
   \sum_(u in (outcomesT * outcomesPaT * outcomesE)%type)
       `Pr[ [% Hinterv t, [% Tinterv t, paTinterv t, Einterv t]] = (h, u) ] = 
@@ -547,6 +601,11 @@ Proof.
   rewrite pfwd1_pairA.
   reflexivity.
 Qed.
+
+
+(*  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                  SECTION : Putting it together
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  *)
 
 (* Given Markov factorization equation,
         independence statements,

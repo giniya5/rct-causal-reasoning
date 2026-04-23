@@ -408,7 +408,8 @@ Proof.
         rewrite mult_zero_left.
         reflexivity.
       
-  apply use_indep_statements; try assumption.  
+  (* apply use_indep_statements; try assumption.  *)
+  admit.
 Admitted.
 
 (* Lemma saying that it the parental adjustment formula, some
@@ -565,6 +566,39 @@ Proof.
   apply parental_to_cond; try assumption.
   apply parental; assumption.
 Qed.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+(* Lemma consistency: forall t h,
+  (forall pa e,
+  `Pr[ [% (Hinterv t), (paTinterv t), (Einterv t)] = (h, pa, e) ] 
+      = `Pr[ [% H, T, paT, E] = (h, t, pa, e) ] / `Pr[ T = t | paT = pa ]) ->
+  `Pr[(Hinterv t) = h | T = t] = `Pr[ H = h | T = t].
+Proof.
+Admitted.
+   *)
+
+
+
+
+
+
+
 
 
 

@@ -1,6 +1,5 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool eqtype fintype bigop.
 Require Import Reals.
-(* Require Import Arith. *)
 From infotheo.probability Require Import proba fdist. (* fsdist jfdist_cond. *)
 Require Import List.
 Import ListNotations.
@@ -10,123 +9,122 @@ From mathcomp Require Import unstable mathcomp_extra reals exp.
 Require Import ssr_ext ssralg_ext bigop_ext realType_ext realType_ln.
 Require Import Classical.
 Require Import Field.
-(* Require Import Lia. *)
 
 Local Open Scope ring_scope.
 Local Open Scope reals_ext_scope.
 Local Open Scope fdist_scope.
 Local Open Scope proba_scope.
 
-(*
-OUTLINE:
-Graph T -> H (Section TwoVarExample)
-- *prob_version_wo_indp* states that P[H|T] = P[H|do(T)],
-  assuming that some probabilities are non-zero, and that
-  unobserved distributions are independent.
-  In other words, under interventional treatment, and
-  observation of the treatement health outcomes are the
-  same (so a RCT where we assign T would be valid for
-  learning the interventional probability).
-  This is basically complete, the only missing lemma is:
-  + *inde_RV_comp*, which is pulled directly from the 
-  infotheo library (and proven there), but for whatever 
-  reason I'm struggling to access it.
-- *doint_equiv_wo_indp* states that E[H|T] = E[H|do(T)] 
-  with the same assumptions as in the probability case, and 
-  also with the assumption that the function that maps the 
-  outcomes to real numbers is injective.
-  Work left:
-  + *change_to_R_version* is not proven. I'm running into
-    issues with type mismatches (realType and finType). This
-    seems like it is potentially rather difficult to fix,
-    since the type mismatch means I can't use their lemmas.
-Graph O -> T -> H, O -> H (confounder, Section ThreeVarConfounderExample)
-- doint_equiv_with_confounder_prob states that
-  P[H|T,O] = P[H|do(T),O], but has the assumption
-  (Hnodefnint t) _|_ Tnodefn | Cnodefn, as well as some
-  assumptions about certain probabilities being non-zero.
-  Almost done. Work left:
-  + 2 lemmas that assert basic arithmetic facts, 
-    *zero_div_zero* and *div_num_and_denom*
-- doint_equiv_with_confounder_prob_wo_indp states
-  the same thing, but now instead assumes that
-  UT, UT, UO are mutually independent instead of the
-  independence assumption in the previous lemma.
-  Work left:
-  + Lots of gaps between this proof and the one above.
-Graph T -> H, T -> O <- H (collider) 
-- Done
-Graph T -> O -> H, T -> H (mediator, Section ThreeVarColliderExample)
-- Done
-General case
-- Will be done in new file but rough sketch is here:
-  Theorem:
-    set Z d-separates H and T ->
-    underlying variables for set Z, H, T are all mutually independent ->
-    P[H|T,Z] = P[H|do(T),Z].
-  This is the general theorem that states that if we
-  satisfy the backdoor criterion, then we can use
-  observational probabilities to learn about interventional
-  probabilities.
 
-  Lemma:
-    underlying variables for set Z, H, T are all mutually independent ->
-    T _|_ H | Z
-  
-  Lemma:
-    T _|_ H | Z ->
-    Tnodefn _|_ Hnodefnint | Znodefns
+Section SevenVarExample.
 
-  Lemma:
-    T _|_ H | Z ->
-    P[Z] != 0 -> P [T|Z] != 0 ->
-    P [H | Z] = P [H | T, Z].
+End SevenVarExample.
+
+
+(* Graph:
+      T->H
+      T->M->H
+      T->D<-H
+      T<-C->H
+      A->T->E
+      B->H->F
 *)
 
-Section TwoVarExample. (* Graph: T -> H *)
+Section NineVarExample. (* Graph: T -> H *)
 
 Context {R : realType}.
-Variables (UT UH : finType).
+Variables (UT UH UA UB UC UD UE UF UM : finType).
 Variables (outcomes: finType).
-Variable P : R.-fdist (UT * UH).
-(* Variables (UTRV : {RV P -> UT}) (UHRV : {RV P -> UH}). *)
-Variable fT : UT -> outcomes.
-Variable fH : UH -> outcomes -> outcomes.
-Let T (p : UT * UH ): outcomes :=
-  fT p.1.
-Let Hinterv (p : UT * UH) t : outcomes :=
-  fH p.2 t. 
-Let H (p : UT * UH) : outcomes :=
-  fH p.2 (T p).
-(* Let nodefn : {RV P -> R * R} :=
-  fun u => (T u , H u).
-Let nodefnint (t:R) : {RV P -> R * R} :=
-  fun u => (t , Hinterv u t). *)
+Variable P : R.-fdist ((UT * UH) * (UA * (UB * (UC * (UD * (UE * (UF * UM))))))).
+
+Variable fA : UA -> outcomes.
+Variable fB : UB -> outcomes.
+Variable fC : UC -> outcomes.
+Variable fT : UT -> outcomes -> outcomes -> outcomes.
+Variable fM : UM -> outcomes -> outcomes.
+Variable fH : UH -> outcomes -> outcomes -> outcomes -> outcomes.
+Variable fD : UD -> outcomes -> outcomes -> outcomes.
+Variable fE : UE -> outcomes -> outcomes.
+Variable fF : UF -> outcomes -> outcomes.
+
+Let A (p : ((UT * UH) * (UA * (UB * (UC * (UD * (UE * (UF * UM))))))) ): outcomes :=
+  fA p.2.1.
+Let B (p : ((UT * UH) * (UA * (UB * (UC * (UD * (UE * (UF * UM))))))) ): outcomes :=
+  fB p.2.2.1.
+Let C (p : ((UT * UH) * (UA * (UB * (UC * (UD * (UE * (UF * UM))))))) ): outcomes :=
+  fC p.2.2.2.1.
+Let T (p : ((UT * UH) * (UA * (UB * (UC * (UD * (UE * (UF * UM))))))) ): outcomes :=
+  fT p.1.1 (A p) (C p).
+Let M (p : ((UT * UH) * (UA * (UB * (UC * (UD * (UE * (UF * UM))))))) ): outcomes :=
+  fM p.2.2.2.2.2.2.2 (T p).
+Let H (p : ((UT * UH) * (UA * (UB * (UC * (UD * (UE * (UF * UM))))))) ): outcomes :=
+  fH p.1.2 (C p) (M p) (T p).
+Let D (p : ((UT * UH) * (UA * (UB * (UC * (UD * (UE * (UF * UM))))))) ): outcomes :=
+  fD p.2.2.2.2.1 (H p) (T p).
+Let E (p : ((UT * UH) * (UA * (UB * (UC * (UD * (UE * (UF * UM))))))) ): outcomes :=
+  fE p.2.2.2.2.2.1 (T p).
+Let F (p : ((UT * UH) * (UA * (UB * (UC * (UD * (UE * (UF * UM))))))) ): outcomes :=
+  fF p.2.2.2.2.2.2.1 (H p).
+
+Let Minterv (p : ((UT * UH) * (UA * (UB * (UC * (UD * (UE * (UF * UM))))))) ) t : outcomes :=
+  fM p.2.2.2.2.2.2.2 t.
+Let Hinterv (p : ((UT * UH) * (UA * (UB * (UC * (UD * (UE * (UF * UM))))))) ) t : outcomes :=
+  fH p.1.2 (C p) (Minterv p t) t.
+Let Dinterv (p : ((UT * UH) * (UA * (UB * (UC * (UD * (UE * (UF * UM))))))) ) t : outcomes :=
+  fD p.2.2.2.2.1 (Hinterv p t) t.
+Let Einterv (p : ((UT * UH) * (UA * (UB * (UC * (UD * (UE * (UF * UM))))))) ) t : outcomes :=
+  fE p.2.2.2.2.2.1 t.
+Let Finterv (p : ((UT * UH) * (UA * (UB * (UC * (UD * (UE * (UF * UM))))))) ) t : outcomes :=
+  fF p.2.2.2.2.2.2.1 (Hinterv p t).
+
+Let Anodefn : {RV P -> outcomes} :=
+  fun u => A u.
+Let Bnodefn : {RV P -> outcomes} :=
+  fun u => B u.
+Let Cnodefn : {RV P -> outcomes} :=
+  fun u => C u.
+Let Dnodefn : {RV P -> outcomes} :=
+  fun u => D u.
+Let Enodefn : {RV P -> outcomes} :=
+  fun u => E u.
+Let Fnodefn : {RV P -> outcomes} :=
+  fun u => F u.
 Let Hnodefn : {RV P -> outcomes} :=
   fun u => H u.
-Type Hnodefn : {RV P -> outcomes}.
+Let Mnodefn : {RV P -> outcomes} :=
+  fun u => M u.
+Let Tnodefn : {RV P -> outcomes} :=
+  fun u => T u.
+
+Let Dnodefnint (t:outcomes) : {RV P -> outcomes} :=
+  fun u => Dinterv u t.
+Let Enodefnint (t:outcomes) : {RV P -> outcomes} :=
+  fun u => Einterv u t.
+Let Fnodefnint (t:outcomes) : {RV P -> outcomes} :=
+  fun u => Finterv u t.
 Let Hnodefnint (t:outcomes) : {RV P -> outcomes} :=
   fun u => Hinterv u t.
-(* Let Hnodefnint (t:outcomes) : RV_of P (Phant (UT * UH)) (Phant outcomes) :=
-  fun u => Hinterv u t. *)
-Let Tnodefn : {RV P -> outcomes} :=  (*T.*)
-  fun u => T u.
-(* Let Hnodefn' : {RV P -> outcomes} :=
-  fun u => fH u.2 (T u). *)
-(* Locate "'RV'".
-Print RV_of.
-Print RV. *)
-Variable fn_outcomes_R : outcomes -> R.
-Let RHnodefn : {RV P -> R} :=
-  fn_outcomes_R `o Hnodefn.
-Let RHnodefnint (t:outcomes) : {RV P -> R} :=
-  fn_outcomes_R `o (Hnodefnint t).
-Let RTnodefn : {RV P -> R} :=
-  fn_outcomes_R `o Tnodefn.
+Let Mnodefnint (t:outcomes) : {RV P -> outcomes} :=
+  fun u => Minterv u t.
+
 Let UTRV: {RV P -> UT} :=
-  fun u => u.1.
+  fun u => u.1.1.
 Let UHRV: {RV P -> UH} :=
-  fun u => u.2.
+  fun u => u.1.2.
+Let UARV: {RV P -> UA} :=
+  fun u => u.2.1.
+Let UBRV: {RV P -> UB} :=
+  fun u => u.2.2.1.
+Let UCRV: {RV P -> UC} :=
+  fun u => u.2.2.2.1.
+Let UDRV: {RV P -> UD} :=
+  fun u => u.2.2.2.2.1.
+Let UERV: {RV P -> UE} :=
+  fun u => u.2.2.2.2.2.1.
+Let UFRV: {RV P -> UF} :=
+  fun u => u.2.2.2.2.2.2.1.
+Let UMRV: {RV P -> UM} :=
+  fun u => u.2.2.2.2.2.2.2.
 
 Lemma mult_div: forall (a b: R),
   b != 0 ->
@@ -151,6 +149,46 @@ Proof.
   assumption.
   reflexivity.
 Qed.
+
+Lemma prob_do_or_obs_equal: forall t c, 
+  mutual_indep_three UHRV UTRV UCRV ->
+  `Pr[ Cnodefn = c ] != 0 ->
+  `Pr[ Tnodefn = t | Cnodefn = c ] != 0 ->
+  (forall h, `Pr[ Hnodefn = h | [% Tnodefn, Cnodefn] = (t, c) ] 
+      = `Pr[ (Hnodefnint t) = h | Cnodefn = c ]).
+Proof.
+  intros. 
+  apply doint_equiv_with_confounder_prob; try assumption.
+  apply mut_unobs_indp_cond_indp_wo_inj; assumption. 
+Qed.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 (* Alternate independence definition *)
 Lemma indep_then_cond_irrelevant: 
@@ -250,16 +288,6 @@ Proof.
   apply indep_implication.
   assumption.
   assumption.
-Qed.
-
-Lemma two_var_backdoor_adjustment: forall (t : outcomes), 
-  P |= UHRV _|_ UTRV ->
-  `Pr[ Tnodefn = t ] != 0 ->
-  forall a, `Pr[ (Hnodefnint t) = a] = `Pr[ Hnodefn = a | Tnodefn = t].
-Proof.
-  intros.
-  apply esym.
-  apply prob_version_wo_indp; assumption.
 Qed.
 
 (* Helper lemma without much intrinsic meaning. *)
@@ -567,15 +595,12 @@ Lemma zero_div_zero: forall (a : R),
   a != 0  ->
   0 / a = 0.
 Proof.
-  intros.
 Admitted.
 
 Lemma mult_by_zero_right: forall (a : R),
   a * 0 = 0.
 Proof.
   intros.
-  Check Rmult_0_r.
-  (* Search (_ * 0). *)
 Admitted.
 
 Lemma mult_by_zero_left: forall (a : R),
@@ -647,20 +672,10 @@ Lemma indep_then_cond_irrelevant_wcond:
   forall x, `Pr[ X = x | Y = y ] != 0 ->
   forall z, `Pr[ Z = z | Y = y] = `Pr[ Z = z | [%X, Y] = (x, y) ].
 Proof.
-
   (* Check cinde_alt. *)
   intros.
   unfold cinde_RV in H0.
   specialize (H0 z x y).
-
-  (* have [Hzero | Hnonzero] := boolP (`Pr[Y = y] == 0).
-    move/eqP: Hzero => Hz'.
-    Check cpr_eq0_denom.
-    rewrite -> cpr_eq0_denom with (X := Z) (a := z) (Z := Y) (b := y).
-    rewrite !cpr_eq0_denom; try assumption.
-    rewrite mult_by_zero_left.
-    reflexivity. *)
-  
   rewrite [in RHS] cpr_eqE.
   apply eqr_divrMr in H0; cycle 1. assumption.
   rewrite <- H0.
@@ -719,7 +734,6 @@ Lemma doint_equiv_with_confounder_prob: forall t c,
       = `Pr[ (Hnodefnint t) = h | Cnodefn = c ]).
 Proof.
   intros.
-
   (* Check cinde_alt.
   assert (`Pr[ [% Tnodefn, Cnodefn] = (t, c)] != 0).
     admit.
@@ -2365,277 +2379,6 @@ Proof.
   apply mut_unobs_indp_cond_indp_wo_inj; assumption. 
 Qed.
 
-Lemma false_cant_be:
-  (0 : R) != 0 ->
-  ~~true.
-Proof.
-Admitted.
-
-
-(* Lemma change_non_zero_condition: forall t c,
-  `Pr[ [% Tnodefn, Cnodefn] = (t, c) ] != 0 ->
-  `Pr[ Cnodefn = c ] != 0 /\
-  `Pr[ Tnodefn = t | Cnodefn = c ] != 0.
-Proof.
-  intros.
-  split.
-  have [Hzero | Hnonzero] := boolP (`Pr[Cnodefn =  c] == 0).
-    move/eqP: Hzero => Hz'.
-    Check pfwd1_domin_RV1.
-    apply pfwd1_domin_RV1 with (TX := Tnodefn) (TY := Cnodefn) (a := t) in Hz'.
-    rewrite Hz' in H0.
-    apply false_cant_be in H0.
-    assumption.
-  exact is_true_true.
-Admitted. *)
-
-Lemma three_var_confounder_backdooor_adjustment_eq: forall t c, 
-  mutual_indep_three UHRV UTRV UCRV ->
-  `Pr[ Tnodefn = t | Cnodefn = c ] != 0 ->
-  (forall h, `Pr[ (Hnodefnint t) = h | Cnodefn = c ] = 
-      `Pr[ Hnodefn = h | [% Tnodefn, Cnodefn] = (t, c) ]).
-Proof.
-  intros.
-  apply esym.
-  (* apply change_non_zero_condition in H1.
-  inversion H1. *)
-  apply doint_equiv_with_confounder_prob_wo_indp_wo_inj; try assumption.
-  Check cpr_eq0_denom.
-  have [Hzero | Hnonzero] := boolP (`Pr[Cnodefn =  c] == 0).
-    move/eqP: Hzero => Hz'.
-    apply cpr_eq0_denom with (X := Tnodefn) (a := t) in Hz'.
-    rewrite Hz' in H1.
-    apply false_cant_be in H1.
-    assumption.
-
-    exact is_true_true.
-Qed.
-
-(* Lemma rewrite_conditional: forall h c t,
-  `Pr[ (Hnodefnint t) = h | Cnodefn = c ] = `Pr[ (Hnodefnint t) = h | (Cnodefn @^-1: [set c]) ]. *)
-
-Lemma confounder_rewrite_within_sum: forall h t,
-  mutual_indep_three UHRV UTRV UCRV ->
-  \sum_(c in outcomes) `Pr[ Hnodefn = h | [% Tnodefn, Cnodefn] = (t, c) ] *
-    `Pr[ Cnodefn = c ] = 
-  \sum_(c in outcomes) `Pr[ (Hnodefnint t) = h | Cnodefn = c ] *
-    `Pr[ Cnodefn = c ].
-Proof.
-  intros.
-  apply eq_bigr.
-  intros.
-  have [Hzero | Hnonzero] := boolP (`Pr[Cnodefn =  i] == 0).
-    move/eqP: Hzero => Hz'.
-    rewrite Hz'.
-    rewrite !mult_by_zero_right.
-    reflexivity.
-
-  assert (`Pr[ Tnodefn = t | Cnodefn = i ] != 0). admit.
-  pose proof (doint_equiv_with_confounder_prob_wo_indp_wo_inj
-      t i H0 Hnonzero H2 h).
-  rewrite H3.
-  reflexivity.
-Admitted.
-
-Lemma total_prob_v2: forall {P' TA TB: finType} {P : R.-fdist(P')}
-  (X : {RV P -> TA}) (Y : {RV P -> TB}),
-  (forall h, `Pr[ X = h] =  
-  \sum_(c in TB) (`Pr[ X = h | Y = c ] * 
-      `Pr[ Y = c ])).
-Proof.
-  intros.
-  rewrite <- pr_in1.
-  rewrite pr_inE.
-  rewrite -> total_prob_cond with (I := TB) 
-      (F := fun c => Y @^-1: [set c]).
-  apply eq_bigr.
-  intros.
-  rewrite <- pr_inE.
-  rewrite pr_in1.
-  rewrite cPr_eq_finType.
-  reflexivity.
-
-  intros.
-  apply/pred0P=> y.
-  rewrite !inE /=.
-  case Hi: (Y y == i).
-  - move/eqP: Hi => Hi.
-    rewrite Hi.
-    rewrite Bool.andb_true_l.
-    apply /eqP.
-    apply /eqP.
-    exact H0.
-  - apply Bool.andb_false_l.
-
-  apply/setP => y.
-  rewrite inE.
-  apply /idP. 
-  rewrite /cover.
-  apply /bigcupP.
-  exists (Y @^-1: [set Y y]).
-  assert ((Y y) \in TB).
-    exact is_true_true.
-  set g := (fun x => Y @^-1: [set x]).
-  fold g.
-  assert (Y @^-1: [set Y y] = g (Y y)).
-    unfold g.
-    reflexivity.
-  rewrite H1.
-  Check mem_imset.
-  (* exists (Y y).
-  unfold preim.
-  Check image_f.
-  (* pose proof (image_f (fun x => [set Y @^-1: [set c]  | c in x]) H0). *)
-  Check mem_imset.
-  rewrite /[set Y @^-1: [set c] | c in TB].
-  exists (Y y).
-  admit.
-  rewrite inE.
-  apply b_in_set_b. *)
-Admitted.
-
-Lemma backdoor_confounder: forall t, 
-  mutual_indep_three UHRV UTRV UCRV ->
-  (forall h, `Pr[ (Hnodefnint t) = h] =  
-  \sum_(c in outcomes) (`Pr[Hnodefn = h | [%Tnodefn, Cnodefn] = (t, c)] * 
-      `Pr[ Cnodefn = c ])).
-Proof.
-  intros.
-  rewrite confounder_rewrite_within_sum; try assumption.
-  rewrite <- pr_in1.
-  rewrite pr_inE.
-  Check total_prob_cond.
-  (* eapply total_prob_cond. *)
-  rewrite -> total_prob_cond with (I := outcomes) 
-      (F := fun c => Cnodefn @^-1: [set c]).
-  apply eq_bigr.
-  intros.
-  admit.
-
-  intros.
-  apply/pred0P=> x.
-  rewrite !inE /=.
-  case Hi: (Cnodefn x == i).
-  - move/eqP: Hi => Hi.
-    rewrite Hi.
-    rewrite Bool.andb_true_l.
-    apply /eqP.
-    apply /eqP.
-    exact H1.
-  - apply Bool.andb_false_l.
-
-  apply/setP=> x.
-  rewrite inE.
-  apply /idP.
-  apply /bigcupP.
-  (* exists (Cnodefn x).
-  exists ([set x]).
-
-  Check preimageE.
-  apply: (ex_msetP H) => c Hc.
-  rewrite /preimage_set. 
-  exists (Cnodefn x).
-
-  pr_in1
-  total_prob  *)
-Admitted.
-
-
-(* Lemma three_var_confounder_backdooor_adjustment_eq: forall t c, 
-  mutual_indep_three UHRV UTRV UCRV ->
-  `Pr[ Tnodefn = t | Cnodefn = c ] != 0 ->
-  (forall h, `Pr[ (Hnodefnint t) = h | Cnodefn = c ] = 
-      `Pr[ Hnodefn = h | [% Tnodefn, Cnodefn] = (t, c) ]). *)
-
-(* Check P. *)
-
-(* Needed for infotheo libaray's total_prob and total_prob_cond lemmas *)
-Lemma disjoint_true: forall {C': finType} (W : {RV (P) -> C'}), 
-  (forall i j : C',
-  i != j ->
-  [disjoint finset (T:=((UC * UT) * UH)%type) (preim W (pred1 i)) & 
-      finset (T:=((UC * UT) * UH)%type) (preim W (pred1 j))]).
-Proof.
-  intros.
-  (* Check setI_eq0. *)
-  rewrite <- setI_eq0.
-  rewrite eqEsubset.
-  rewrite sub0set.
-  (* Search ( _ && true). *)
-  rewrite Bool.andb_true_r.
-  apply/subsetP => y.
-  rewrite in_set0.
-  rewrite inE.
-  rewrite !in_set.
-  simpl.
-  intros.
-  move/andP in H1.
-  inversion H1.
-  move/eqP in H2.
-  move/eqP in H3.
-  rewrite <- H2 in H0.
-  rewrite <- H3 in H0.
-  rewrite eqxx in H0.
-  exact H0.
-Qed.
-
-(* Needed for infotheo libaray's total_prob and total_prob_cond lemmas *)
-Lemma cover_true: forall {C': finType} (W : {RV (P) -> C'}),
-  cover [set finset (T:=((UC * UT) * UH)%type) (preim W (pred1 i)) 
-      | i : C'] = [set: ((UC * UT) * UH)%type].
-Proof.
-  intros.
-  apply/setP=> y. 
-  rewrite inE.
-  apply/bigcupP.
-  exists ((finset (T:=((UC * UT) * UH)%type) (preim W (pred1 (W y))))).
-  apply/imsetP.
-  exists (W y).
-  rewrite inE.
-  reflexivity.
-  reflexivity.
-  
-  rewrite inE.
-  rewrite /=.
-  apply eqxx.
-Qed.
-
-Lemma marginalize: forall {A C' : finType} (X : {RV P -> A})
-  (W : {RV P -> C'}) x,
-  `Pr[ X = x ] = \sum_(u in C') 
-      `Pr[ X = x | W = u ] * `Pr[ W = u ].
-Proof.
-  intros.
-  (* Check total_prob_cond. *)
-  rewrite pfwd1E.
-  rewrite -> total_prob_cond with (I := C') 
-      (F := (fun i => (finset (T:=((UC * UT) * UH)%type) (preim W (pred1 i))))).
-  apply eq_bigr => u _.
-  rewrite <- pfwd1E.
-  rewrite <- cPr_eq_def.
-  reflexivity.
-  apply disjoint_true.
-  apply cover_true.
-Qed.
-
-
-Lemma three_var_confounder_backdoor_adjustment: forall t,      
-  mutual_indep_three UHRV UTRV UCRV ->
-  (forall c, `Pr[ Tnodefn = t | Cnodefn = c ] != 0) ->
-  (forall h, `Pr[ (Hnodefnint t) = h] =  
-  \sum_(c in outcomes) (`Pr[Hnodefn = h | [%Tnodefn, Cnodefn] = (t, c)] * 
-      `Pr[ Cnodefn = c ])).
-Proof.
-  intros.
-  under eq_bigr => c _.
-    rewrite <- three_var_confounder_backdooor_adjustment_eq; cycle 1; try assumption.
-    specialize (H1 c).
-    assumption.
-    over.
-  simpl.
-  rewrite <- marginalize.
-  reflexivity.
-Qed.
 
 
 
@@ -2665,9 +2408,10 @@ Qed.
 
 
 
-Print Assumptions three_var_confounder_backdoor_adjustment.
 
-(* Print Assumptions two_var_backdoor_adjustment. *)
+
+
+
 
 End ThreeVarConfounderExample.
 
@@ -2818,7 +2562,7 @@ Proof.
   exact H1.
 Qed.
 
-Lemma three_var_mediator_backdoor_adjustment: forall t,
+Lemma doint_mediator: forall t,
   mutual_indep_three UC UH UT P UHRV UTRV UCRV ->
   `Pr[ Tnodefn = t ] != 0 ->
   forall a, `Pr[ Hnodefn = a | Tnodefn = t] = `Pr[ (Hnodefnint t) = a].
@@ -2831,7 +2575,6 @@ Proof.
   assumption.
 Qed.
 
-Print Assumptions three_var_mediator_backdoor_adjustment.
 
 End ThreeVarMediatorExample.
 
@@ -2959,18 +2702,6 @@ Proof.
   assumption.
 Qed.
 
-Lemma three_var_collider_backdoor_adjustment: forall t,
-  mutual_indep_three UC UH UT P UHRV UTRV UCRV ->
-  `Pr[ Tnodefn = t ] != 0 ->
-  forall a, `Pr[ (Hnodefnint t) = a] = `Pr[ Hnodefn = a | Tnodefn = t].
-Proof.
-  intros.
-  apply esym.
-  apply doint_collider; try assumption.
-Qed.
-
-Print Assumptions three_var_collider_backdoor_adjustment.
-
 End ThreeVarColliderExample.
 
 
@@ -3037,95 +2768,6 @@ Let UCRV: {RV P -> UC} :=
   fun u => u.1.1.2.
 Let UERV: {RV P -> UE} :=
   fun u => u.1.1.1.
-
-
-(* Lemma doint_equiv_with_two_confounder_prob: forall t c e, 
-  (Hnodefnint t) _|_ Tnodefn | [% Cnodefn, Enodefn] ->
-  `Pr[ [% Tnodefn, [% Cnodefn, Enodefn]] = (t, c, e) ] != 0 ->
-  (forall h, `Pr[ Hnodefn = h | [% Tnodefn, [% Cnodefn, Enodefn]] = (t, c, e) ] 
-      = `Pr[ (Hnodefnint t) = h | Cnodefn = c ]).
-Proof.
-  (* intros.
-  Check cinde_alt.
-  rewrite <- cinde_alt with (b := t) (Y := Tnodefn); try assumption.
-  rewrite cpr_eqE.
-  rewrite cpr_eqE.
-  eapply eqr_divrMr.
-  assumption.
-  rewrite div_mult.
-  unfold Hnodefn.
-  unfold H.
-  unfold Tnodefn.
-  unfold T.
-  unfold Cnodefn.
-  unfold Hnodefnint.
-  unfold Hinterv.
-  unfold C.
-  unfold Tnodefn in H1.
-  unfold T in H1.
-
-  rewrite !pfwd1E /Pr.
-  apply: eq_bigl=> a.
-  rewrite !inE.
-  rewrite xpair_eqE.
-  rewrite xpair_eqE.
-  rewrite xpair_eqE.
-  rewrite xpair_eqE.
-  case Hc : (fC a.1.1.2 (E a) == c).
-  - move/eqP : Hc => Hc.
-    rewrite Hc.
-    case Ht : (fT a.1.2 c == t).
-    + move/eqP : Ht => Ht.
-      rewrite Ht.
-      reflexivity.
-    + rewrite !andbF.
-      reflexivity.
-  - rewrite !andbF.
-    reflexivity.
-  assumption. *)
-Admitted. *)
-
-
-Type [% UERV, UCRV].
-Type UHRV.
-
-Lemma four_var__two_confounder_backdoor_adjustment: forall t,      
-  mutual_indep_three ((UE * UC)%type) UH UT P UHRV UTRV [% UERV, UCRV] ->
-  (forall c e, `Pr[ Tnodefn = t | [% Enodefn, Cnodefn] = (e, c) ] != 0) ->
-  (forall h, `Pr[ (Hnodefnint t) = h] =  
-  \sum_( ec in (outcomes * outcomes)) (`Pr[Hnodefn = h | [%Tnodefn, [% Enodefn, Cnodefn]] = (t, ec)] * 
-      `Pr[ [% Enodefn, Cnodefn] = ec ])).
-Proof.
-  intros.
-  under eq_bigr => c _.
-    rewrite <- three_var_confounder_backdooor_adjustment_eq; cycle 1; try assumption.
-    specialize (H1 c).
-    assumption.
-    over.
-  simpl.
-  rewrite <- marginalize.
-  reflexivity.
-Qed.
-Lemma indp_contraction: 
-  forall {TA TB TD TF : finType}
-  (A : {RV P -> TA}) (B : {RV P -> TB}) (D: {RV P -> TD}) (F: {RV P -> TF}),
-  A _|_ B | [% F, D] -> 
-  A _|_ F | D ->
-  A _|_ [% B, F] | D.
-Proof.
-Admitted.
-
-Lemma unobs_indep1:
-  mutual_indep_four UTRV UHRV UCRV UERV ->
-  UTRV _|_ UHRV | [% C, UERV].
-
-Lemma unobs_indep2_bad1:
-  mutual_indep_four UTRV UHRV UCRV UERV ->
-  UTRV _|_ UERV | [% C, UHRV].
-
-Lemma unobs_indep2_bad2:
-  mutual_indep_four UTRV UHRV UCRV UERV ->
-  UTRV _|_ UERV | C.
 
 Lemma doint_equiv_with_two_confounder_prob: forall t c, 
   (Hnodefnint t) _|_ Tnodefn | Cnodefn ->

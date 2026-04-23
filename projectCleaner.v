@@ -27,10 +27,10 @@ Let Hinterv (p : UT * UH) t : R :=
   fH p.2 t. 
 Let H (p : UT * UH) : R :=
   fH p.2 (T p).
-Let nodefn : {RV P -> R * R} :=
+(* Let nodefn : {RV P -> R * R} :=
   fun u => (T u , H u).
 Let nodefnint (t:R) : {RV P -> R * R} :=
-  fun u => (t , Hinterv u t).
+  fun u => (t , Hinterv u t). *)
 Let Hnodefn : {RV P -> R} :=
   fun u => H u.
 Let Hnodefnint (t:R) : {RV P -> R} :=
@@ -44,9 +44,6 @@ Let UTRV: {RV P -> UT} :=
   fun u => u.1.
 Let UHRV: {RV P -> UH} :=
   fun u => u.2.
-
-Check comp_RV.
-(* Check inde_RV_comp. *)
 
 (* Lemma transform_fn:
   X _|_ Y -> f(X) _|_ Y.
@@ -283,30 +280,52 @@ Proof.
   assumption.
 Qed.
 
-(* Lemma indep_implication *)
+Check comp_RV.
+(* Search (_ |= _ _|_ _). *)
+(* Check inde_RV_comp. *)
+(* Check inde_RVP. *)
 
-(* Lemma
-  UH indep UT ->
-  P |= (Hnodefnint t) _|_ Tnodefn *)
-
-(* Lemma prob_version_wo_indp: forall t,
-  (* I'm not sure how to state that UH, UT are indep? I think it might be implicit in my sample space definition? *)
-  (* P |= (Hnodefnint t) _|_ Tnodefn -> *)
-  `Pr[ Tnodefn = t ] != 0 ->
-  forall a, `Pr[ Hnodefn = a | Tnodefn = t] = `Pr[ (Hnodefnint t) = a].
+Lemma inde_RV_comp (TA TB UA UB : finType) (X : {RV P -> TA}) (Y : {RV P -> TB})
+    (f : TA -> UA) (g : TB -> UB) :
+  P |= X _|_ Y -> P|= (f `o X) _|_ (g `o Y).
 Proof.
-Admitted. *)
+  Check (f `o X).
+Admitted.
+(* move=> /inde_RVP inde_XY; apply/inde_RVP => E F.
+by rewrite (pr_in_comp' f) (pr_in_comp' g) -inde_XY -preimsetX -pr_in_comp'.
+Qed. *)
+
+Lemma indep_implication: forall t,
+  P |= UTRV _|_ UHRV ->
+  P |= (Hnodefnint t) _|_ Tnodefn.
+Proof.
+  intros.
+  unfold Hnodefnint.
+  unfold Hinterv.
+  unfold Tnodefn.
+  unfold T.
+  Check (Hnodefnint t).
+  pose proof (inde_RV_comp UH UT _ _ UHRV UTRV (fun u => fH u t) (fun u => fT u)). 
+  unfold UTRV in H0.
+  unfold UHRV in H0.
+  unfold fst in H0.
+  simpl in H0.
+  apply inde_RV_comp.
+  Check inde_RV_comp.
+Admitted.
 
 
 Lemma doint_equiv_wo_indp: forall (t : R), 
+  P |= UTRV _|_ UHRV ->
   `Pr[ Tnodefn = t ] != 0 ->
   `E_[ Hnodefn | finset (Tnodefn @^-1 t) ] = `E (Hnodefnint t).
 Proof.
   intros.
-  pose proof (prob_version_wo_indp t H0).
-  pose proof (prob_to_exp t H0 H1).
+  apply doint_equiv.
+  apply indep_implication.
   assumption.
-Admitted.
+  assumption.
+Qed.
 
 End TwoVarExample.
 

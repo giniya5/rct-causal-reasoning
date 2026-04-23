@@ -1442,7 +1442,7 @@ Qed.
   `Pr[ [% T, C] = (t, c) | C = c] = `Pr[ T = t | C = c]. *)
 
 Lemma fvc_indep1:
-  mutual_indep_four E C T H ->
+  (* mutual_indep_four E C T H -> *)
   (forall c t, `Pr[ [% C, T] = (c, t) ] != 0) ->
   T _|_ C | C.
 Proof.
@@ -1457,11 +1457,11 @@ Proof.
     rewrite mult_one_right.
     reflexivity.
   
-    specialize (H1 c a).
+    specialize (H0 c a).
     (* Check pair_to_single_non_zero. *)
     apply pair_to_single_non_zero with (outcomesH := outcomesH)
         (outcomesT := outcomesT) (outcomesPaT := outcomesH) 
-        (outcomesZ := outcomesH) (outcomesE := outcomesH) in H1; try eauto.
+        (outcomesZ := outcomesH) (outcomesE := outcomesH) in H0; try eauto.
 
   rewrite var_cond_diff_zero; try assumption.
   rewrite mult_zero_right.
@@ -1470,7 +1470,7 @@ Proof.
 Qed.
 
 Lemma fvc_indep2:
-  mutual_indep_four E C T H ->
+  (* mutual_indep_four E C T H -> *)
   H _|_ C | [% T, C].
 Proof.
   intros.
@@ -1516,7 +1516,7 @@ Lemma four_var_confounder_backdoor_adjustment: forall t,
   (forall h c e,
   `Pr[ [% (Hinterv t), (Cinterv t), (Einterv t)] = (h, c, e) ] 
       = `Pr[ [% H, T, C, E] = (h, t, c, e) ] / `Pr[ T = t | C = c ]) ->
-  mutual_indep_four E C T H ->
+  mutual_indep_four UERV UCRV UTRV UHRV ->
   (forall u t, `Pr[ T = t | C = u ] != 0) ->
   (forall h, `Pr[(Hinterv t) = h] = \sum_(c : outcomesC) 
       `Pr[ H = h | [% T, C] = (t, c)] * `Pr[C = c]).
@@ -1647,5 +1647,53 @@ Proof.
   exact (fun t => [% (Cinterv t), (Finterv t)]).
 Qed.
 
+Lemma can_swap_indep_cond_order: forall  {A B C D : finType} (X : {RV P -> A}) (Y : {RV P -> B})
+  (W : {RV P -> C}) (V : {RV P -> D}),
+  X _|_ Y | [% W, V] ->
+  X _|_ Y | [% V, W].
+Proof.
+Admitted.
+
+Lemma adding_brackets_in_indep: forall  {A B C D A' : finType} (X : {RV P -> A}) (Y : {RV P -> B})
+  (W : {RV P -> C}) (V : {RV P -> D}) (Z' : {RV P -> A'}),
+  Z' _|_ V | [% W, X, Y] ->
+  Z' _|_ V | [% W, [% X, Y]].
+Proof.
+  intros.
+  unfold cinde_RV.
+  unfold cinde_RV in H0.
+  intros.
+  destruct c as [w [x y]].
+  specialize (H0 a b (w, x, y)).
+Admitted.
+
+Lemma eight_var_confounder_backdoor_adjustment_weaker_indp: forall t,
+  (forall h pa e,
+  `Pr[ [% (Hinterv t), [% (Cinterv t), (Dinterv t), (Qinterv t)], 
+      [% (Einterv t), (Finterv t) ]] = (h, pa, e) ] 
+      = `Pr[ [% H, T, [% C, D, Q] , [% E, F]] = (h, t, pa , e ) ] 
+        / `Pr[ T = t | [% C, D, Q] = pa ]) ->
+  T _|_ F | [% C, D, Q] ->
+  H _|_ [% D, Q] | [% T, [% C, F]] ->
+  (forall pa t, `Pr[ T = t | [% C, D, Q] = pa ] != 0) ->
+  (* true. *)
+  (forall h, `Pr[(Hinterv t) = h] = \sum_(cf : outcomesC * outcomesF) 
+      `Pr[ H = h | [% T, [% C, F] ] = (t, cf)] * `Pr[[% C, F] = cf]).
+Proof.
+  intros.
+  apply eight_var_confounder_backdoor_adjustment; try assumption.
+  (* apply can_swap_indep_cond_order in H1. *)
+  apply adding_brackets_in_indep in H1.
+  pose proof (can_swap_indep_cond_order T F C [% D, Q] H1).
+  (* apply adding_conditional_to_indep in H4. *)
+
+  (* pose proof (adding_conditional_to_indep T F C [% D, Q]). *)
+  unfold cinde_RV in H4. 
+  apply adding_conditional_to_indep with (outcomesH := outcomesH)
+      (outcomesT := outcomesT) (outcomesPaT := outcomesH) (outcomesZ := outcomesH)
+      (outcomesE := outcomesH) in H4; eauto.
+  admit.
+Admitted.
+  
 
 End LargeExample.

@@ -74,15 +74,15 @@ Lemma mult_both_sides_r: forall (a b c : R),
   a = b ->
   a * c = b * c.
 Proof.
-  intros.
-  (* eapply eqr_divrMr. *)
-Admitted.
+  by move=> a b c ->.
+Qed.
 
 Lemma mult_both_sides_l: forall (a b c : R),
   a = b ->
   c * a = c * b.
 Proof.
-Admitted.
+  by move=> a b c ->.
+Qed.
 
 Lemma mult_div: forall (a b: R),
   b != 0 ->
@@ -141,30 +141,48 @@ Lemma div_div: forall (a b c : R),
   c != 0 -> 
   a / (b / c) = a / b * c.
 Proof.
-  intros.
-  (* rewrite GRing.divrA. *)
-Admitted.
+  move=> a b c Hb Hc.
+  rewrite GRing.invrM ?GRing.unitfE ?GRing.invr_neq0 //.
+  rewrite GRing.invrK.
+  rewrite GRing.mulrAC.
+  rewrite GRing.mulrA.
+  reflexivity.
+Qed.
 
 Lemma div_both_sides: forall (a b c : R),
-  c != 0 ->
+  (* c != 0 -> *)
   a = b ->
   a / c = b / c.
 Proof.
-  intros.
-  Check GRing.mulfV.
-Admitted.
+  by move=> a b c ->.
+Qed.
 
 Lemma zero_div_zero: forall (a : R),
   a != 0 ->
   0 / a = 0.
 Proof.
-Admitted.
+  intros.
+  rewrite GRing.mul0r.
+  reflexivity.
+Qed.
+
+Lemma div_not_zero: forall (a b : R),
+  b != 0 ->
+  a / b != 0 ->
+  a != 0.
+Proof.
+  move=> a b _. apply: contra.
+  by move/eqP=> ->; rewrite GRing.mul0r.
+Qed.
 
 Lemma false_cant_be:
   (0 : R) != 0 ->
   ~~true.
 Proof.
-Admitted.
+  intros. 
+  rewrite eqxx in H0.
+  assumption.
+Qed.
 
 (*  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                   SECTION : SIMPLE PROBABILITY LEMMAS 
@@ -225,17 +243,11 @@ Proof.
   move/eqP: Hzero => Hzero.
   apply pfwd1_domin_RV2 with (TX := X) (TY := Y) (b := y) in Hzero.
   rewrite Hzero in H0.
-
-  exfalso.
-  (* apply H0.
-  reflexivity.
-
-  Search ( _ != _ ).
-  rewrite <- contra.Internals.eqType_neqP in H0. *)
-  admit.
+  apply false_cant_be in H0.
+  discriminate.
 
   exact is_true_true.
-Admitted.
+Qed.
 
 Lemma indep_to_equality: forall {A B C : finType} (X : {RV P -> A}) (Y : {RV P -> B})
   (W : {RV P -> C}) x y w,
@@ -568,8 +580,8 @@ Proof.
   rewrite cpr_eqE.
   rewrite cpr_eqE.
   apply div_both_sides with (c := `Pr[ [% Y, V] = (y, v) ]); try assumption.
-    apply /negP.
-    assumption.
+    (* apply /negP.
+    assumption. *)
   rewrite !pfwd1E /Pr.
   apply: eq_bigl=> a0.
   rewrite !inE.
@@ -709,11 +721,25 @@ Proof.
   Check pfwd1_domin_RV2. *)
 Qed.
 
-Lemma cond_to_pair_non_zero: forall t u,
-  `Pr[ T = t | paT = u ] != 0 ->
-  `Pr[ [% T, paT] = (t, u) ] != 0.
+Lemma cond_to_pair_non_zero: forall {A B : finType} 
+  {X : {RV P -> A}} {Y : {RV P -> B}} x y,
+  `Pr[ X = x | Y = y ] != 0 ->
+  `Pr[ [% X, Y] = (x, y) ] != 0.
 Proof.
-Admitted.
+  intros.
+  case: (boolP (`Pr[ Y = y ] == 0)).
+  intros.
+    move /eqP in p.
+    rewrite cpr_eq0_denom in H0; try assumption.
+    apply false_cant_be in H0.
+    discriminate H0.
+  
+  intros.
+  rewrite cpr_eqE in H0.
+  apply div_not_zero with (a := `Pr[ [% X, Y] = (x, y) ]) (b := `Pr[ Y = y ]).
+  assumption.
+  assumption.
+Qed.
 
 Lemma oddly_specific: forall t u z h,
   `Pr[ T=t | paT=u ] != 0 ->
@@ -724,11 +750,25 @@ Proof.
   assert (`Pr[ [% paT, [% T, Z]] = (u, (t, z)) ] = 
       `Pr[ Z = z | [% paT, T] = (u, t) ] * `Pr[ T=t | paT=u] * `Pr[ paT=u]).
     rewrite !cpr_eqE.
-    admit.
+    rewrite [in RHS] pfwd1_pairC.
+    rewrite -> pfwd1_pairC with (TX := paT) (TY := T).
+    unfold swap. simpl.
+    rewrite <- pfwd1_pairA.
+    (* Check GRing.mulrA. *)
+    rewrite GRing.mulrA.
+    rewrite GRing.divfK.
+    rewrite GRing.divfK.
+    reflexivity.
+    apply cond_to_pair_non_zero in H0.
+    rewrite pfwd1_pairC. unfold swap. simpl.
+    assumption.
+    apply cond_to_pair_non_zero in H0.
+    apply pair_to_single_non_zero_right in H0.
+    assumption.
   rewrite H1 in H2.
   apply esym in H2.
   (* apply Rmult_integral in H2. *)
-  Check GRing.mulf_eq0.
+  (* Check GRing.mulf_eq0. *)
   move /eqP in H2.
   rewrite !GRing.mulf_eq0 in H2.
   move /orP in H2.
@@ -752,7 +792,7 @@ Proof.
   rewrite H3.
   rewrite GRing.mulr0.
   reflexivity.
-Admitted.
+Qed.
 
 Lemma use_indep_statements: forall h t, 
   Z _|_ T | paT ->

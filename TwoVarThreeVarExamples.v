@@ -83,6 +83,21 @@ General case
     P [H | Z] = P [H | T, Z].
 *)
 
+Section GeneralDefLemmas.
+
+Context {R : realType}.
+
+(* The library only seems to have mutually independent
+   events and not RV, although I'm maybe missing something. *)
+Definition mutual_indep_three {A : finType} {P : R.-fdist (A)} {X' Y' Z': finType}
+  (X : {RV P -> X'}) (Y : {RV P -> Y'}) (Z: {RV P -> Z'}) := 
+  (forall x y z,
+  `Pr[ X = x ] * `Pr[ Y = y ] * `Pr[ Z = z ] 
+    = `Pr[ [%[% X, Y], Z] = ((x,y), z)]) /\ 
+    P |= X _|_ Y /\ P |= Y _|_ Z /\ P |= X _|_ Z.
+
+End GeneralDefLemmas.
+
 Section TwoVarExample. (* Graph: T -> H *)
 
 Context {R : realType}.
@@ -490,6 +505,8 @@ Proof.
   assumption.
 Qed.
 
+Print Assumptions two_var_backdoor_adjustment.
+
 End TwoVarExample.
 
 
@@ -557,32 +574,40 @@ Proof.
   Check GRing.mulrC.
   Check GRing.mulrVK.
   (* rewrite GRing.divrA. *)
-  rewrite GRing.mulrC.
-  (* rewrite GRing.divrA. *)
-  (* rewrite GRing.mulrVK. *)
-  (* nra. *)
-Admitted.
+  rewrite GRing.invfM GRing.invrK.
+  rewrite -!GRing.mulrA.
+  rewrite [c^-1 * b]GRing.mulrC.
+  rewrite GRing.mulrA.
+  rewrite GRing.mulrA.
+  rewrite GRing.divfK.
+  reflexivity.
+  assumption.
+Qed.
 
 Lemma zero_div_zero: forall (a : R),
   a != 0  ->
   0 / a = 0.
 Proof.
   intros.
-Admitted.
+  rewrite GRing.mul0r.
+  reflexivity.
+Qed.
 
-Lemma mult_by_zero_right: forall (a : R),
+Lemma mult_zero_right: forall (a : R),
   a * 0 = 0.
 Proof.
   intros.
-  Check Rmult_0_r.
-  (* Search (_ * 0). *)
-Admitted.
+  rewrite GRing.mulr0.
+  reflexivity.
+Qed.
 
-Lemma mult_by_zero_left: forall (a : R),
+Lemma mult_zero_left: forall (a : R),
   0 * a = 0.
 Proof.
   intros.
-Admitted.
+  rewrite GRing.mul0r.
+  reflexivity.
+Qed.
 
 (* Important Lemma that says that if the thing you're
    conditioning on in a probability is 0, the entire 
@@ -636,6 +661,15 @@ Proof.
 
 Qed.
 
+Lemma joint_then_cond_nonzero: forall {A B : finType} (X : {RV P -> A})
+  (Y : {RV P -> B}) x,
+  (forall y, `Pr[ [% X, Y] = (x, y)] != 0) ->
+  (forall y, `Pr[ X = x | Y = y ] != 0).
+Proof.
+  intros.
+  specialize (H0 y).
+Admitted.
+
 (* Another definition of indepedence. I wrote it because I needed
    this for the 2 variable case, but I actually think it was already
    defined for condition indepence in cinde_alt, and I should change
@@ -658,7 +692,7 @@ Proof.
     Check cpr_eq0_denom.
     rewrite -> cpr_eq0_denom with (X := Z) (a := z) (Z := Y) (b := y).
     rewrite !cpr_eq0_denom; try assumption.
-    rewrite mult_by_zero_left.
+    rewrite mult_zero_left.
     reflexivity. *)
   
   rewrite [in RHS] cpr_eqE.
@@ -771,14 +805,16 @@ Proof.
   apply cond_then_joint_zero; assumption.
 Qed.
 
-(* The library only seems to have mutually independent
+(* Print Assumptions doint_equiv_with_confounder_prob. *)
+
+(* (* The library only seems to have mutually independent
    events and not RV, although I'm maybe missing something. *)
 Definition mutual_indep_three {X' Y' Z': finType}
   (X : {RV P -> X'}) (Y : {RV P -> Y'}) (Z: {RV P -> Z'}) := 
   (forall x y z,
   `Pr[ X = x ] * `Pr[ Y = y ] * `Pr[ Z = z ] 
     = `Pr[ [%[% X, Y], Z] = ((x,y), z)]) /\ 
-    P |= X _|_ Y /\ P |= Y _|_ Z /\ P |= X _|_ Z.
+    P |= X _|_ Y /\ P |= Y _|_ Z /\ P |= X _|_ Z. *)
     
 Check mutual_indeE. (* For events, will need something for RVs. *)
 (* Definition mutual_inde_RV := forall k, @kwise_inde R A I k.+1 d E. *)
@@ -810,7 +846,7 @@ Proof.
     Check cpr_eq0_denom.
     move/eqP: Hzero => H0.
     rewrite !cpr_eq0_denom; try assumption.
-    rewrite mult_by_zero_left.
+    rewrite mult_zero_left.
     reflexivity.
   rewrite !cpr_eqE.
   rewrite IndpYZ.
@@ -919,7 +955,7 @@ Proof.
   rewrite H3.
   rewrite pfwd1_pairC.
   rewrite pfwd1_domin_RV2.
-  rewrite mult_by_zero_right.
+  rewrite mult_zero_right.
   reflexivity.
   simpl.
   assumption.
@@ -929,16 +965,16 @@ Proof.
   rewrite <- pfwd1_pairA.
   rewrite <- pfwd1_pairCA.
   rewrite pfwd1_domin_RV2.
-  rewrite mult_by_zero_right.
-  rewrite mult_by_zero_left.
+  rewrite mult_zero_right.
+  rewrite mult_zero_left.
   reflexivity.
   assumption.
 
   pose proof (no_fn_val_prob_zero X f x Hfnotin).
   rewrite H3.
   rewrite pfwd1_domin_RV2.
-  rewrite mult_by_zero_left.
-  rewrite mult_by_zero_left.
+  rewrite mult_zero_left.
+  rewrite mult_zero_left.
   reflexivity.
   rewrite pfwd1_domin_RV2.
   reflexivity.
@@ -1099,7 +1135,7 @@ Proof.
   rewrite cpr_eqE.
   eapply eqr_divrMr.
   assumption.
-  rewrite mult_by_zero_left.
+  rewrite mult_zero_left.
   rewrite <- pfwd1_pairA.
   apply pfwd1_domin_RV1.
   apply same_RV_two_vals.
@@ -1121,7 +1157,7 @@ Proof.
   have [Hzero | Hnonzero] := boolP (`Pr[Z = c] == 0).
     move/eqP: Hzero => Hz'.
     rewrite !cpr_eq0_denom; try assumption.
-    rewrite mult_by_zero_left.
+    rewrite mult_zero_left.
     reflexivity.
 
   destruct (a2 =P c) as [Heq1 | Hneq1].
@@ -1173,9 +1209,9 @@ Proof.
   simpl.
   rewrite -> pfwd1_pairA.
   rewrite -> pfwd1_pairA. 
-  rewrite mult_by_zero_right.
+  rewrite mult_zero_right.
   rewrite eqr_divrMr.
-  rewrite mult_by_zero_left.
+  rewrite mult_zero_left.
   rewrite <- pfwd1_pairA.
   rewrite <- pfwd1_pairA.
   apply pfwd1_domin_RV1 with (TX := Z) (TY := [% X, Z, [% Y, Z]]).
@@ -1188,10 +1224,10 @@ Proof.
   assumption.
   
   rewrite cond_not_match_arg; try assumption.
-  rewrite mult_by_zero_left.
+  rewrite mult_zero_left.
   rewrite cpr_eqE.
   rewrite eqr_divrMr.
-  rewrite mult_by_zero_left.
+  rewrite mult_zero_left.
   rewrite <- pfwd1_pairA.
   rewrite <- pfwd1_pairA.
   apply pfwd1_domin_RV1 with (TX := X) (TY := [% Z, [% Y, Z, Z]]).
@@ -1319,7 +1355,7 @@ Proof.
     Check cpr_eq0_denom.
     move/eqP: Hzero => Hz'.
     rewrite !cpr_eq0_denom; try assumption.
-    rewrite mult_by_zero_left.
+    rewrite mult_zero_left.
     reflexivity.
   
   destruct (classic  (exists xz, f xz = a)) as [ [xz Hf] | Hfnotin ].
@@ -1396,7 +1432,7 @@ Proof.
   rewrite pfwd1_pairA in H6.
   rewrite H6.
   rewrite zero_div_zero.
-  rewrite mult_by_zero_right.
+  rewrite mult_zero_right.
   reflexivity.
   assumption.
   
@@ -1408,7 +1444,7 @@ Proof.
   rewrite H5.
   rewrite H7.
   rewrite zero_div_zero.
-  rewrite mult_by_zero_left.
+  rewrite mult_zero_left.
   reflexivity.
   assumption.
 Qed.
@@ -1960,6 +1996,7 @@ Proof.
   reflexivity.
 Qed.
 
+(* Introduces classic assumption *)
 Lemma pr_in_comp_sets: forall {U : finType} {P0 : R.-fdist U}
   (A B : finType) (X : {RV (P0) -> (A)})
   (f : A -> B) (B' : {set B}) (A' : {set A}),
@@ -1976,7 +2013,7 @@ Proof.
     specialize (H0 a).
     assumption.
     specialize (H1 a).
-    Check NNPP.
+    (* Check NNPP. *)
     intros.
     apply NNPP.
     intro H3.
@@ -1985,6 +2022,10 @@ Proof.
   rewrite H2.
   reflexivity.
 Qed.
+
+(* Print Assumptions pr_in_comp_sets.
+Print Assumptions pr_in_comp'.
+Print Assumptions NNPP. *)
 
 Lemma pfwd1_comp_sets: forall {U : finType} {P0 : R.-fdist U}
   (A B : finType) (X : {RV (P0) -> (A)})
@@ -2093,6 +2134,9 @@ Proof.
   assumption.
 Qed.
 
+(* Print Assumptions pr_in_comp_sets_joint.
+Print Assumptions pfwd1_comp_sets. *)
+
 Lemma pfwd1_comp_sets_joint: forall {U : finType} {P0 : R.-fdist U}
   (A B D : finType) (X : {RV (P0) -> (A)}) (Y : {RV (P0) -> (D)})
   (f : A -> B) (b : B) (d: D) (A' : {set A}),
@@ -2108,6 +2152,8 @@ Proof.
   rewrite same_singleton_sets.
   reflexivity.
 Qed.
+
+(* Print Assumptions pfwd1_comp_sets_joint. *)
 
 Lemma change_to_set_three_way: forall {TA TB TD: finType}
   (X : {RV P -> TA}) (Y : {RV P -> TB}) (Z: {RV P -> TD}), 
@@ -2276,7 +2322,7 @@ Proof.
     Check cpr_eq0_denom.
     move/eqP: Hzero => Hz'.
     rewrite !cpr_eq0_denom; try assumption.
-    rewrite mult_by_zero_left.
+    rewrite mult_zero_left.
     reflexivity.
 
   pose proof (set_A'_always_exists f a).
@@ -2292,29 +2338,27 @@ Proof.
   rewrite <- cpr_inEdiv.
   rewrite <- cpr_inEdiv.
 
-  Check pfwd1_pairA.
-  Check pr_in_pairA.
   rewrite <- pfwd1_pairA.
   (* rewrite <- pr_in_pairA with (X := (f `o [% X, Z])) (Y := (g `o [% Y, Z])) (Z := Z) (). *)
   rewrite -> pfwd1_comp_sets_joint with (A' := Af) (f := f) (X := [% X, Z]) (Y := [% g `o [% Y, Z], Z]); try assumption.
-  Check pr_in_pairCA.
   assert (Af `* [set (b, c)] = Af `* ([set b] `* [set c])).
     pose proof (same_singleton_sets b c).
     rewrite H1.
     reflexivity.
   rewrite H1.
   rewrite -> pr_in_pairCA with (X := [% X, Z]) (Y := (g `o [% Y, Z])) (Z := Z).
-  Check pr_in_comp_sets_joint.
   rewrite -> pr_in_comp_sets_joint with (X := [% Y, Z]) (Y := [% X, Z, Z]) (A' := Ag); try assumption.
   rewrite <- pr_in_pairCA with (X := [% X, Z]) (Y := [% Y, Z]) (Z := Z).
-  Check pr_in_pairA.
   rewrite -> pr_in_pairA with (X := [% X, Z]) (Y := [% Y, Z]) (Z := Z).
   rewrite <- cpr_inEdiv.
 
-  Check cinde_RV_sets.
   apply cinde_RV_sets.
   assumption.
 Qed.
+
+(* Print Assumptions cinde_RV_sets.
+Print Assumptions set_A'_always_exists. *)
+(* Print Assumptions pfwd1_comp_sets_joint. *)
 
 (* Lemma removing previous stricter condition, claiming
    that if we start with mutual independence and some 
@@ -2336,7 +2380,7 @@ Proof.
   (* apply mut_indp_with_fn in H0. *)
   apply mut_indp_cond_indp in H1; try assumption.
   apply indp_not_affected_by_adding_cond in H1.
-  Check cinde_fn_transform'.
+  (* Check cinde_fn_transform'. *)
   pose proof (cinde_fn_transform' UHRV UTRV (fC `o UCRV) (fun u => fH u.1 u.2 t)
     (fun u => fT u.1 u.2) H1).
   unfold comp_RV in H2.
@@ -2347,6 +2391,7 @@ Proof.
   exact H2.
 Qed. 
 
+(* Print Assumptions cinde_fn_transform'. *)
 
 (* If we have mutual independence, then on the graph
    C -> T -> H, C -> H
@@ -2365,11 +2410,17 @@ Proof.
   apply mut_unobs_indp_cond_indp_wo_inj; assumption. 
 Qed.
 
+(* Print Assumptions doint_equiv_with_confounder_prob.
+Print Assumptions mut_unobs_indp_cond_indp_wo_inj. *)
+
 Lemma false_cant_be:
   (0 : R) != 0 ->
   ~~true.
 Proof.
-Admitted.
+  intros. 
+  rewrite eqxx in H0.
+  assumption.
+Qed.
 
 
 (* Lemma change_non_zero_condition: forall t c,
@@ -2411,6 +2462,8 @@ Proof.
     exact is_true_true.
 Qed.
 
+(* Print Assumptions doint_equiv_with_confounder_prob_wo_indp_wo_inj. *)
+
 (* Lemma rewrite_conditional: forall h c t,
   `Pr[ (Hnodefnint t) = h | Cnodefn = c ] = `Pr[ (Hnodefnint t) = h | (Cnodefn @^-1: [set c]) ]. *)
 
@@ -2427,7 +2480,7 @@ Proof.
   have [Hzero | Hnonzero] := boolP (`Pr[Cnodefn =  i] == 0).
     move/eqP: Hzero => Hz'.
     rewrite Hz'.
-    rewrite !mult_by_zero_right.
+    rewrite !mult_zero_right.
     reflexivity.
 
   assert (`Pr[ Tnodefn = t | Cnodefn = i ] != 0). admit.
@@ -2666,6 +2719,11 @@ Qed.
 
 
 Print Assumptions three_var_confounder_backdoor_adjustment.
+Print three_var_confounder_backdoor_adjustment.
+
+
+Print Assumptions three_var_confounder_backdooor_adjustment_eq.
+
 
 (* Print Assumptions two_var_backdoor_adjustment. *)
 
@@ -2727,7 +2785,11 @@ Let UCRV: {RV P -> UC} :=
 Lemma change_ord_mult: forall (a b c : R),
   a * b * c  = a * c * b.
 Proof.
-Admitted.
+  intros.
+  rewrite -!GRing.mulrA.
+  rewrite [b * c]GRing.mulrC.
+  reflexivity.
+Qed.
 
 (* Probability lemma with stronger assumption than desired *)
 Lemma doint_prob_mediator_w_assump: forall t,
@@ -2794,7 +2856,7 @@ Proof.
 Qed.
 
 Lemma mediator_mut_indp_to_pair_indp:
-  mutual_indep_three UC UH UT P UHRV UTRV UCRV ->
+  mutual_indep_three UHRV UTRV UCRV ->
   P |= [% UHRV, UCRV] _|_ UTRV.
 Proof.
   intros.
@@ -2819,7 +2881,7 @@ Proof.
 Qed.
 
 Lemma three_var_mediator_backdoor_adjustment: forall t,
-  mutual_indep_three UC UH UT P UHRV UTRV UCRV ->
+  mutual_indep_three UHRV UTRV UCRV ->
   `Pr[ Tnodefn = t ] != 0 ->
   forall a, `Pr[ Hnodefn = a | Tnodefn = t] = `Pr[ (Hnodefnint t) = a].
 Proof.
@@ -2919,7 +2981,7 @@ Proof.
 Qed.
 
 Lemma collider_mut_indp_to_pair_indp:
-  mutual_indep_three UC UH UT P UHRV UTRV UCRV ->
+  mutual_indep_three UHRV UTRV UCRV ->
   P |= UHRV _|_ UTRV.
 Proof.
   intros.
@@ -2947,7 +3009,7 @@ Proof.
 Qed.
 
 Lemma doint_collider: forall t,
-  mutual_indep_three UC UH UT P UHRV UTRV UCRV ->
+  mutual_indep_three UHRV UTRV UCRV ->
   `Pr[ Tnodefn = t ] != 0 ->
   forall a, `Pr[ Hnodefn = a | Tnodefn = t] = `Pr[ (Hnodefnint t) = a].
 Proof. 
@@ -2960,7 +3022,7 @@ Proof.
 Qed.
 
 Lemma three_var_collider_backdoor_adjustment: forall t,
-  mutual_indep_three UC UH UT P UHRV UTRV UCRV ->
+  mutual_indep_three UHRV UTRV UCRV ->
   `Pr[ Tnodefn = t ] != 0 ->
   forall a, `Pr[ (Hnodefnint t) = a] = `Pr[ Hnodefn = a | Tnodefn = t].
 Proof.
@@ -3090,7 +3152,7 @@ Type [% UERV, UCRV].
 Type UHRV.
 
 Lemma four_var__two_confounder_backdoor_adjustment: forall t,      
-  mutual_indep_three ((UE * UC)%type) UH UT P UHRV UTRV [% UERV, UCRV] ->
+  mutual_indep_three UHRV UTRV [% UERV, UCRV] ->
   (forall c e, `Pr[ Tnodefn = t | [% Enodefn, Cnodefn] = (e, c) ] != 0) ->
   (forall h, `Pr[ (Hnodefnint t) = h] =  
   \sum_( ec in (outcomes * outcomes)) (`Pr[Hnodefn = h | [%Tnodefn, [% Enodefn, Cnodefn]] = (t, ec)] * 
@@ -3106,6 +3168,7 @@ Proof.
   rewrite <- marginalize.
   reflexivity.
 Qed.
+
 Lemma indp_contraction: 
   forall {TA TB TD TF : finType}
   (A : {RV P -> TA}) (B : {RV P -> TB}) (D: {RV P -> TD}) (F: {RV P -> TF}),

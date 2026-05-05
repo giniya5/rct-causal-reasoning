@@ -1,12 +1,13 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool eqtype fintype bigop.
-Require Import Reals.
+From Stdlib Require Import Reals.
 From infotheo.probability Require Import proba fdist. (* fsdist jfdist_cond. *)
 Require Import List.
 Import ListNotations.
 From mathcomp Require Import reals.
 From mathcomp Require Import all_ssreflect all_algebra fingroup lra ssralg.
 From mathcomp Require Import unstable mathcomp_extra reals exp.
-Require Import ssr_ext ssralg_ext bigop_ext realType_ext realType_ln.
+From infotheo Require Import ssr_ext ssralg_ext bigop_ext realType_ext realType_ln.
+(* Require Import ssr_ext ssralg_ext bigop_ext realType_ext realType_ln. *)
 Require Import Classical.
 Require Import Field.
 Require Import Lia.
@@ -113,7 +114,6 @@ Lemma mult_in_middle: forall (a b c : R),
   a / b * ( b / c ) = a / c.
 Proof.
   move=> a b c hb.
-  Check GRing.mulrA.
   rewrite GRing.mulrA.
   rewrite GRing.divfK.
   reflexivity.
@@ -238,7 +238,6 @@ Lemma pair_to_single_non_zero: forall {A B : finType} (X : {RV P -> A})
   `Pr[ X = x ] != 0.
 Proof.
   intros.
-  Check pfwd1_domin_RV2.
   have [Hzero | Hnonzero] := boolP (`Pr[X = x] == 0).
   move/eqP: Hzero => Hzero.
   apply pfwd1_domin_RV2 with (TX := X) (TY := Y) (b := y) in Hzero.
@@ -270,7 +269,6 @@ Lemma disjoint_true: forall {C: finType} (W : {RV (P) -> C}),
   [disjoint finset (T:=U) (preim W (pred1 i)) & finset (T:=U) (preim W (pred1 j))]).
 Proof.
   intros.
-  (* Check setI_eq0. *)
   rewrite <- setI_eq0.
   rewrite eqEsubset.
   rewrite sub0set.
@@ -317,7 +315,6 @@ Lemma total_prob': forall {A C : finType} (X : {RV P -> A})
   `Pr[ X = x ] = \sum_(u in C) `Pr[ [% X, W] = (x, u) ].
 Proof.
   intros.
-  Check total_prob.
   rewrite pfwd1E.
   rewrite -> total_prob with (I := C)
       (F := (fun i => (finset (T:=U) (preim W (pred1 i))))).
@@ -342,7 +339,6 @@ Lemma marginalize: forall {A C : finType} (X : {RV P -> A})
       `Pr[ X = x | W = u ] * `Pr[ W = u ].
 Proof.
   intros.
-  (* Check total_prob_cond. *)
   rewrite pfwd1E.
   rewrite -> total_prob_cond with (I := C) 
       (F := (fun i => (finset (T:=U) (preim W (pred1 i))))).
@@ -424,13 +420,21 @@ Proof.
       simpl.
       rewrite mult_in_middle; try assumption.
       over.
-  (* Check big_enum. *)
   simpl. *)
-  rewrite <- big_enum with (A := C) (F := (fun u => `Pr[ [% X, [% Y, W]] = (x, (y, u)) ] / `Pr[ Y = y ])).
+  (* change (pfwd1 (P:=P) [% X, [% Y, W]] (x, (y, u))) with (`Pr[ [% X, [% Y, W]] = (x, (y, u)) ]) in *. *)
+  (* Check big_enum. *)
+  rewrite -[RHS]big_enum.
+  (* assert (\sum_(u in C) `Pr[ [% X, [% Y, W]] = (x, (y, u))] / `Pr[ (Y) = (y) ] = \sum_(u <- enum C) `Pr[ [% X, [% Y, W]] = (x, (y, u))] / `Pr[ (Y) = (y) ]).
+    rewrite big_enum.
+    reflexivity.
+  rewrite H1. *)
+  (* rewrite <- big_enum with (A := C) 
+      (F := (fun u => pfwd1 (A:=Datatypes_prod__canonical__eqtype_Equality A (Datatypes_prod__canonical__eqtype_Equality B C)) (P:=P) [% X, [% Y, W]] (x, (y, u)) / `Pr[ (Y) = (y) ])).
+  rewrite <- big_enum with (A := C) (F := (fun u => `Pr[ [% X, [% Y, W]] = (x, (y, u)) ] / `Pr[ Y = y ])). *)
   simpl.
-  (* Check big_distrl. *)
-  rewrite <- big_distrl with (r := enum C)
-      (F := (fun u => `Pr[ [% X, [% Y, W]] = (x, (y, u)) ])).
+  rewrite -[RHS]big_distrl.
+  (* rewrite <- big_distrl with (r := enum C)
+      (F := (fun u => `Pr[ [% X, [% Y, W]] = (x, (y, u)) ])). *)
   simpl.
   rewrite big_enum.
   simpl.
@@ -702,7 +706,7 @@ Proof.
 
   intros.
   specialize (H0 i0).
-  Check pfwd1_neq0.
+  (* Check pfwd1_neq0. *)
   (* destruct (classic (exists z, z \in outcomesZ)). *)
   destruct H1 as [z].
   specialize (H0 z i1).
@@ -754,7 +758,6 @@ Proof.
     rewrite -> pfwd1_pairC with (TX := paT) (TY := T).
     unfold swap. simpl.
     rewrite <- pfwd1_pairA.
-    (* Check GRing.mulrA. *)
     rewrite GRing.mulrA.
     rewrite GRing.divfK.
     rewrite GRing.divfK.
@@ -1023,7 +1026,7 @@ Proof.
     specialize (H0 h u u0).
     rewrite H0.
     over.
-  rewrite <- big_enum.
+  rewrite -[LHS]big_enum.
   (* simpl.
   Check big_enum.
   rewrite <- big_enum with (A := outcomesE)
@@ -1253,7 +1256,6 @@ Definition mutual_indep_four {W' X' Y' Z': finType}
 Lemma mult_one_right: forall (a : R),
   a * 1 = a.
 Proof.
-  Check GRing.mulr1.
   apply GRing.mulr1.
 Qed.
 
@@ -1454,7 +1456,6 @@ Lemma extra_indentical_factor: forall t c,
 Proof.
   intros.
   rewrite cpr_eqE.
-  Check pfwd1_diag.
   rewrite pfwd1_diag_ext.
   rewrite <- cpr_eqE.
   reflexivity.
@@ -1498,10 +1499,10 @@ Proof.
     reflexivity.
   
     specialize (H0 c a).
-    (* Check pair_to_single_non_zero. *)
-    apply pair_to_single_non_zero with (outcomesH := outcomesH)
+    apply pair_to_single_non_zero in H0; eauto.
+    (* apply pair_to_single_non_zero with (outcomesH := outcomesH)
         (outcomesT := outcomesT) (outcomesPaT := outcomesH) 
-        (outcomesZ := outcomesH) (outcomesE := outcomesH) in H0; try eauto.
+        (outcomesZ := outcomesH) (outcomesE := outcomesH) in H0; try eauto. *)
 
   rewrite var_cond_diff_zero; try assumption.
   rewrite mult_zero_right.
@@ -1522,9 +1523,10 @@ Proof.
     move /eqP in i.
     inversion i.
     (* pose proof (remove_redundant_cond_term). *)
-    rewrite -> remove_redundant_cond_term with (outcomesH := outcomesH)
+    rewrite -> remove_redundant_cond_term; eauto.
+    (* rewrite -> remove_redundant_cond_term with (outcomesH := outcomesH)
         (outcomesT := outcomesT) (outcomesPaT := outcomesC) 
-        (outcomesZ := outcomesC) (outcomesE := outcomesE); try eauto.
+        (outcomesZ := outcomesC) (outcomesE := outcomesE); try eauto. *)
     case (boolP (`Pr[ [% T, C] = (t, c) ] == 0)).
       intros.
       move /eqP in i0.
@@ -1538,9 +1540,10 @@ Proof.
     assumption.
     
   intros.
-  rewrite -> cond_term_makes_impossible with (outcomesH := outcomesH)
+  rewrite -> cond_term_makes_impossible; eauto.
+  (* rewrite -> cond_term_makes_impossible with (outcomesH := outcomesH)
         (outcomesT := outcomesT) (outcomesPaT := outcomesC) 
-        (outcomesZ := outcomesC) (outcomesE := outcomesE); try eauto.
+        (outcomesZ := outcomesC) (outcomesE := outcomesE); try eauto. *)
   rewrite -> var_cond_diff_zero_gen3; try assumption.
   rewrite GRing.mulr0.
   reflexivity.
@@ -1572,11 +1575,81 @@ Proof.
   intros.
   specialize (H2 c t0).
   rewrite pfwd1_pairC. unfold swap. simpl.
-  apply cond_to_pair_non_zero with (outcomesH := outcomesH) 
-      (outcomesZ := outcomesC) (outcomesE := outcomesE); eauto.
+  apply cond_to_pair_non_zero; eauto.
+  (* apply cond_to_pair_non_zero with (outcomesH := outcomesH) 
+      (outcomesZ := outcomesC) (outcomesE := outcomesE); eauto. *)
   apply fvc_indep2; try assumption.
   (* apply extra_factor_in_nonzero; try assumption. *)
 Qed.
+
+Lemma factorhold_four_var_helper_helper: forall t,
+  [% (Hinterv t), E] _|_ T | C ->
+  forall h e c, `Pr[ [% (Hinterv t), E] = (h, e) | [% T, C] = (t, c)] = 
+  `Pr[ [% (Hinterv t), E] = (h, e) | C = c].
+Proof.
+Admitted.
+
+Lemma factorhold_four_var_helper_helper': forall t, 
+  mutual_indep_four UERV UCRV UTRV UHRV ->
+   [% (Hinterv t), E] _|_ T | C.
+Proof.
+  intros.
+  unfold cinde_RV.
+  intros.
+
+Admitted.
+
+(* Lemma factorhold_four_var_helper_helper'': forall t, 
+  mutual_indep_four UERV UCRV UTRV UHRV ->
+  [% UCRV, UERV,] *)
+
+Lemma factorhold_four_var_helper: forall t,
+  mutual_indep_four UERV UCRV UTRV UHRV ->
+  (forall h c e,
+  `Pr[ [% (Hinterv t), (Einterv t)] = (h, e) | (Cinterv t) = c] 
+      = `Pr[ [% H, E] = (h, e) | [% T, C] = (t, c)]).
+Proof.
+  intros.
+  change (Cinterv t) with C.
+  change (Einterv t) with E.
+  rewrite !cPr_eq_def /Pr.
+  (* rewrite cPr_eq_def.
+  rewrite /Pr.
+  apply: eq_bigl=> a0.
+  rewrite !inE.
+  rewrite !xpair_eqE.
+  case Hx : (X a0 == x).
+    case Hv : (V a0 == v).
+      case Hy : (Y a0 == y).
+        case Hw : (W a0 == w).
+        simpl.
+        reflexivity.
+
+        simpl.
+        reflexivity.
+
+        simpl.
+        rewrite !andbF.
+        reflexivity.
+
+        simpl.
+        rewrite !andbF.
+        reflexivity.
+
+        simpl.
+        rewrite !andbF.
+        reflexivity. *)
+
+Admitted.
+
+Lemma factorhold_four_var: forall t,
+  mutual_indep_four UERV UCRV UTRV UHRV ->
+  (forall h c e,
+  `Pr[ [% (Hinterv t), (Cinterv t), (Einterv t)] = (h, c, e) ] 
+      = `Pr[ [% H, T, C, E] = (h, t, c, e) ] / `Pr[ T = t | C = c ]).
+Proof.
+  intros. 
+Admitted.
 
 (* Print Assumptions four_var_confounder_backdoor_adjustment. *)
 
@@ -1684,7 +1757,7 @@ Proof.
       (paT := [% C, D, Q]) (E := [% E, F])
       (paTinterv := (fun t => [% (Cinterv t), (Dinterv t), (Qinterv t)]))
       (Einterv := (fun t => [% (Einterv t), (Finterv t)])); eauto. 
-  exact (fun t => [% (Cinterv t), (Finterv t)]).
+  (* exact (fun t => [% (Cinterv t), (Finterv t)]). *)
 Qed.
 
 Lemma can_swap_indep_cond_order: forall  {A B C D : finType} (X : {RV P -> A}) (Y : {RV P -> B})
@@ -1729,9 +1802,10 @@ Proof.
 
   (* pose proof (adding_conditional_to_indep T F C [% D, Q]). *)
   unfold cinde_RV in H4. 
-  apply adding_conditional_to_indep with (outcomesH := outcomesH)
+  apply adding_conditional_to_indep in H4.
+  (* apply adding_conditional_to_indep with (outcomesH := outcomesH)
       (outcomesT := outcomesT) (outcomesPaT := outcomesH) (outcomesZ := outcomesH)
-      (outcomesE := outcomesH) in H4; eauto.
+      (outcomesE := outcomesH) in H4; eauto. *)
   admit.
 Admitted.
   

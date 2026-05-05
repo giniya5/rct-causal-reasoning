@@ -1,4 +1,48 @@
 -R . project
 -R frap Frap
 -R /home/giniya/.opam/infoth/lib/coq/user-contrib/infotheo infotheo
--R /home/giniya/causal_models_formalization annacausal
+# -R causal_models_formalization annacausal
+
+-Q causal_models_formalization/DAGs DAGs
+-Q causal_models_formalization/Utils Utils
+-Q causal_models_formalization/CausalDiagrams CausalDiagrams
+-Q causal_models_formalization/Semantics Semantics
+# -Q . MyProject
+
+# Utils/EqType.v
+# Utils/Lists.v
+# Utils/List_Basics.v
+# Utils/Logic.v
+# Utils/List_Relations.v
+# Utils/Sublists.v
+# DAGs/Basics_Constr.v
+# DAGs/Basics_Proofs.v
+# DAGs/Basics.v
+# DAGs/PathFinding.v
+# DAGs/CycleDetection.v
+# DAGs/Descendants.v
+# DAGs/Adjacency.v
+# DAGs/TopologicalSort.v
+# CausalDiagrams/Assignments.v
+# CausalDiagrams/IntermediateNodes.v
+# CausalDiagrams/CausalPaths.v
+# CausalDiagrams/DSeparation.v
+# CausalDiagrams/UnblockedAncestors.v
+# CausalDiagrams/Interventions.v
+# CausalDiagrams/Counterfactuals.v
+# Semantics/FunctionRepresentation.v
+# Semantics/FindValue.v
+# Semantics/NodeCategorization.v
+# Semantics/S1_Sources.v
+# Semantics/S1_SourcesSeq.v
+# Semantics/S2_Transmitters.v
+# Semantics/S3_Colliders.v
+# Semantics/S4_Descendants.v
+# Semantics/ColliderDescendants.v
+# Semantics/DescendantPathsDisjoint.v
+# Semantics/SemanticSeparationDef.v
+# Semantics/EquateValues.v
+# Semantics/ChangeOrigUnbAnc.v
+# Semantics/SemanticDSepEquiv.v
+TwoVarThreeVarExamples.v
+GeneralParentalAdj.v

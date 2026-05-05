@@ -1,5 +1,5 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool eqtype fintype bigop.
-Require Import Reals.
+From Stdlib Require Import Reals.
 (* Require Import Arith. *)
 From infotheo.probability Require Import proba fdist. (* fsdist jfdist_cond. *)
 Require Import List.
@@ -7,7 +7,8 @@ Import ListNotations.
 From mathcomp Require Import reals.
 From mathcomp Require Import all_ssreflect all_algebra fingroup lra ssralg.
 From mathcomp Require Import unstable mathcomp_extra reals exp.
-Require Import ssr_ext ssralg_ext bigop_ext realType_ext realType_ln.
+(* Require Import ssr_ext ssralg_ext bigop_ext realType_ext realType_ln. *)
+From infotheo Require Import ssr_ext ssralg_ext bigop_ext realType_ext realType_ln.
 Require Import Classical.
 Require Import Field.
 (* Require Import Lia. *)
@@ -131,12 +132,12 @@ Let Tnodefn : {RV P -> outcomes} :=  (*T.*)
 (* Locate "'RV'".
 Print RV_of.
 Print RV. *)
-Variable fn_outcomes_R : outcomes -> R.
-Let RHnodefn : {RV P -> R} :=
+Variable fn_outcomes_R : outcomes -> GRing.regular R.
+Let RHnodefn : {RV P -> GRing.regular R} :=
   fn_outcomes_R `o Hnodefn.
-Let RHnodefnint (t:outcomes) : {RV P -> R} :=
+Let RHnodefnint (t:outcomes) : {RV P -> GRing.regular R} :=
   fn_outcomes_R `o (Hnodefnint t).
-Let RTnodefn : {RV P -> R} :=
+Let RTnodefn : {RV P -> GRing.regular R} :=
   fn_outcomes_R `o Tnodefn.
 Let UTRV: {RV P -> UT} :=
   fun u => u.1.
@@ -238,7 +239,6 @@ Proof.
   unfold Tnodefn.
   unfold T.
   (* apply inde_RV_comp. *)
-  (* Check (Hnodefnint t). *)
   (* pose proof (inde_RV_comp _ _ UH UT _ _ UHRV UTRV (fun u => fH u t) (fun u => fT u) H0). *)
   pose proof (inde_RV_comp (fun u => fH u t) (fun u => fT u) H0).
   unfold comp_RV in H1. 
@@ -280,7 +280,7 @@ Qed.
 (* Helper lemma without much intrinsic meaning. *)
 Lemma prob_as_sum_of_eq: forall t, 
   (forall a, `Pr[ RHnodefn = a | Tnodefn = t ] = `Pr[ (RHnodefnint t) = a]) ->
-  `E (RHnodefnint t) = \sum_(r <- fin_img (A:=(UT * UH)%type) (B:=R) (RHnodefnint t)) 
+  `E (((RHnodefnint t) : {RV P -> GRing.regular R})) = \sum_(r <- fin_img (A:=(UT * UH)%type) (B:=R) (RHnodefnint t)) 
       r * `Pr[ RHnodefn = r | Tnodefn = t ].
 Proof.
   intros.
@@ -291,6 +291,7 @@ Proof.
   intros.
   specialize (H0 r).
   rewrite H0.
+  rewrite /GRing.scale /= GRing.mulrC.
   reflexivity.
 Qed.
 
@@ -400,7 +401,6 @@ Lemma sums_with_int_and_noint_index: forall t,
     r * `Pr[ RHnodefn = r | Tnodefn = t ].
 Proof.
   intros.
-  Check bigID.
   rewrite (bigID (fun r => r \in fin_img (RHnodefn))).
   simpl.
   rewrite same_preimg_helper_int_general; cycle 1; try assumption.
@@ -428,10 +428,12 @@ Proof.
   rewrite /cEx.
   apply eq_big => r. reflexivity.
   intros.
-  rewrite <- GRing.mulrA.
+  (* rewrite <- GRing.mulrA. *)
   rewrite /cPr_eq.
   rewrite /cPr.
   unlock.
+  rewrite /GRing.scale /= GRing.mulrC.
+  (* rewrite <- GRing.mulrA. *)
   reflexivity.
 Qed.
 
@@ -454,7 +456,7 @@ Proof.
   unfold RHnodefnint.
   destruct (classic  (exists a, fn_outcomes_R a = b)) as [ [a Ha] | Hnotin ].
   rewrite <- Ha.
-  Check pfwd1_comp.
+  (* Check pfwd1_comp. *)
   admit.
   (* rewrite [in RHS] pfwd1_comp. *)
   (* pose proof (pfwd1_comp (Hnodefnint t) a H0 fn_outcomes_R a H0). *)
@@ -484,7 +486,6 @@ Proof.
   intros.
   apply prob_to_exp. assumption.
   apply change_to_R_version; try assumption.
-  (* Check prob_version. *)
   apply prob_version. assumption.
   assumption.
 Qed.
@@ -571,9 +572,6 @@ Lemma div_num_and_denom: forall (a b c d : R),
   a / b / (c / b) = a / c.
 Proof.
   intros.
-  Check GRing.mulrC.
-  Check GRing.mulrVK.
-  (* rewrite GRing.divrA. *)
   rewrite GRing.invfM GRing.invrK.
   rewrite -!GRing.mulrA.
   rewrite [c^-1 * b]GRing.mulrC.
@@ -661,6 +659,54 @@ Proof.
 
 Qed.
 
+Lemma cpr_eq0_denom_gen: forall {TA TD UU: finType} {P' : R.-fdist(UU)}
+  (X : {RV P' -> TA}) (Z: {RV P' -> TD}) a b,
+  `Pr[Z = b] = 0 ->
+  `Pr[X = a | Z = b] = 0.
+Proof.
+  intros.
+  rewrite cPr_eq_finType.
+  apply cPr_eq0P.
+  rewrite setIC. 
+  apply Pr_domin_setI.
+  (* rewrite <- H0. *)
+
+  (* rewrite pfwd1E.
+  rewrite /preim in H0.
+  rewrite /= in H0.
+  rewrite /Pr. *)
+
+  rewrite <- cpr_eq_unit_RV in H0.
+  rewrite cPr_eq_finType in H0.
+  apply cPr_eq0P in H0.
+  assert (Z @^-1: [set b] :&: unit_RV P' @^-1: [set tt] = Z @^-1: [set b]).
+    simpl.
+    apply/setP => u.
+    rewrite !inE.
+    destruct (Z u == b).
+    simpl.
+    unfold unit_RV.
+    rewrite eq_refl.
+    reflexivity.
+    simpl.
+    reflexivity.
+  rewrite <- H0.
+  rewrite H1.
+  reflexivity.
+
+  (* rewrite /Pr.
+
+  unfold unit_RV in H0.
+  simpl in H0. *)
+
+  (* rewrite cPr_eq_def in H0. 
+  rewrite cPr_eq_finType in H0.
+  
+  rewrite pfwd1E in H0.
+  simpl in H0. *)
+
+Qed.
+
 Lemma joint_then_cond_nonzero: forall {A B : finType} (X : {RV P -> A})
   (Y : {RV P -> B}) x,
   (forall y, `Pr[ [% X, Y] = (x, y)] != 0) ->
@@ -681,15 +727,12 @@ Lemma indep_then_cond_irrelevant_wcond:
   forall x, `Pr[ X = x | Y = y ] != 0 ->
   forall z, `Pr[ Z = z | Y = y] = `Pr[ Z = z | [%X, Y] = (x, y) ].
 Proof.
-
-  (* Check cinde_alt. *)
   intros.
   unfold cinde_RV in H0.
   specialize (H0 z x y).
 
   (* have [Hzero | Hnonzero] := boolP (`Pr[Y = y] == 0).
     move/eqP: Hzero => Hz'.
-    Check cpr_eq0_denom.
     rewrite -> cpr_eq0_denom with (X := Z) (a := z) (Z := Y) (b := y).
     rewrite !cpr_eq0_denom; try assumption.
     rewrite mult_zero_left.
@@ -754,7 +797,7 @@ Lemma doint_equiv_with_confounder_prob: forall t c,
 Proof.
   intros.
 
-  (* Check cinde_alt.
+  (* 
   assert (`Pr[ [% Tnodefn, Cnodefn] = (t, c)] != 0).
     admit.
   pose proof (cinde_alt c H0 H3). *)
@@ -816,7 +859,7 @@ Definition mutual_indep_three {X' Y' Z': finType}
     = `Pr[ [%[% X, Y], Z] = ((x,y), z)]) /\ 
     P |= X _|_ Y /\ P |= Y _|_ Z /\ P |= X _|_ Z. *)
     
-Check mutual_indeE. (* For events, will need something for RVs. *)
+(* Check mutual_indeE. (* For events, will need something for RVs. *) *)
 (* Definition mutual_inde_RV := forall k, @kwise_inde R A I k.+1 d E. *)
 
 (* This lemma states that mutual independence gives us
@@ -843,7 +886,6 @@ Proof.
   specialize (IndpXZ a c).
   specialize (IndpYZ b c).
   have [Hzero | Hnonzero] := boolP (`Pr[Z = c] == 0).
-    Check cpr_eq0_denom.
     move/eqP: Hzero => H0.
     rewrite !cpr_eq0_denom; try assumption.
     rewrite mult_zero_left.
@@ -1073,6 +1115,27 @@ Proof.
   contradiction.
 Qed.
 
+Lemma same_RV_two_vals_gen: forall {TA UU: finType} {P' : R.-fdist(UU)}
+  (X : {RV P' -> TA}) a b,
+  b <> a ->
+  `Pr[ [% X, X] = (a, b)] = 0.
+Proof.
+  intros.
+  rewrite pfwd1_eq0.
+  reflexivity.
+  rewrite /fin_img.
+  apply /negP.
+  rewrite mem_undup.
+  move /mapP.
+  move => Hpair.
+  move: Hpair => [x Hx Hpair].
+  unfold RV2 in Hpair.
+  inversion Hpair.
+  rewrite H3 in H0.
+  rewrite H2 in H0.
+  contradiction.
+Qed.
+
 Lemma can_move_cond: forall {TA TD: finType}
   (X : {RV P -> TA}) (Z: {RV P -> TD}) a c,
   (* `Pr[ Z = c ] != 0 ->  *)
@@ -1081,9 +1144,39 @@ Proof.
   intros.
   
   have [Hzero | Hnonzero] := boolP (`Pr[Z = c] == 0).
-    Check cpr_eq0_denom.
     move/eqP: Hzero => H0.
     rewrite !cpr_eq0_denom; try assumption.
+    reflexivity.
+
+  rewrite cpr_eqE.
+  simpl.
+  rewrite cpr_eqE.
+  eapply eqr_divrMr.
+  assumption.
+  rewrite div_mult.
+
+  rewrite pfwd1E. rewrite pfwd1E.
+  rewrite /Pr.
+  apply eq_bigl => a0.
+  rewrite !inE.
+  rewrite xpair_eqE.
+  rewrite xpair_eqE.
+  rewrite <- andbA.
+  rewrite Bool.andb_diag.
+  reflexivity.
+  assumption.
+Qed.
+
+Lemma can_move_cond_gen: forall {TA TD UU: finType} {P' : R.-fdist(UU)}
+  (X : {RV P' -> TA}) (Z: {RV P' -> TD}) a c,
+  (* `Pr[ Z = c ] != 0 ->  *)
+  `Pr[ [% X, Z] = (a, c) | Z = c ] = `Pr[ X = a | Z = c].
+Proof.
+  intros.
+  
+  have [Hzero | Hnonzero] := boolP (`Pr[Z = c] == 0).
+    move/eqP: Hzero => H0.
+    rewrite !cpr_eq0_denom_gen; try assumption.
     reflexivity.
 
   rewrite cpr_eqE.
@@ -1139,6 +1232,30 @@ Proof.
   rewrite <- pfwd1_pairA.
   apply pfwd1_domin_RV1.
   apply same_RV_two_vals.
+  apply nesym.
+  assumption.
+Qed.
+
+Lemma cond_not_match_arg_gen: forall {TA TD UU: finType} {P' : R.-fdist(UU)}
+  (X : {RV P' -> TA}) (Z: {RV P' -> TD}) a b c,
+  b <> c ->
+  (* `Pr[ Z = c ] != 0 -> *)
+  `Pr[ [% X, Z] = (a, b) | Z = c ] = 0.
+Proof.
+  intros.
+  
+  have [Hzero | Hnonzero] := boolP (`Pr[Z = c] == 0).
+    move/eqP: Hzero => Hz'.
+    rewrite !cpr_eq0_denom_gen; try assumption.
+    reflexivity.
+
+  rewrite cpr_eqE.
+  eapply eqr_divrMr.
+  assumption.
+  rewrite mult_zero_left.
+  rewrite <- pfwd1_pairA.
+  apply pfwd1_domin_RV1.
+  apply same_RV_two_vals_gen.
   apply nesym.
   assumption.
 Qed.
@@ -1254,6 +1371,104 @@ Proof.
   Check cPr_eq_id. *)
 Qed.
 
+Lemma indp_not_affected_by_adding_cond_gen: forall {TA TB TD UU: finType}
+  {P' : R.-fdist(UU)} (X : {RV P' -> TA}) (Y : {RV P' -> TB}) (Z: {RV P' -> TD}),
+  X _|_ Y | Z ->
+  [% X, Z] _|_ [% Y, Z ] | Z. 
+Proof.
+  intros.
+  unfold cinde_RV.
+  intros.
+  destruct a as [a a2].
+  destruct b as [b b2].
+
+  have [Hzero | Hnonzero] := boolP (`Pr[Z = c] == 0).
+    move/eqP: Hzero => Hz'.
+    rewrite !cpr_eq0_denom_gen; try assumption.
+    rewrite mult_zero_left.
+    reflexivity.
+
+  destruct (a2 =P c) as [Heq1 | Hneq1].
+  destruct (b2 =P c) as [Heq2 | Hneq2].
+  rewrite Heq1.
+  rewrite Heq2.
+  rewrite can_move_cond_gen.
+  rewrite can_move_cond_gen.
+
+  unfold cinde_RV in H0.
+  specialize (H0 a b c).
+  rewrite <- H0.
+  rewrite cpr_eqE.
+  rewrite cpr_eqE.
+  rewrite eqr_divrMr.
+  rewrite div_mult.
+
+  rewrite pfwd1E. 
+  rewrite pfwd1E.
+  rewrite /Pr.
+  apply eq_bigl => a0.
+  rewrite !inE.
+  rewrite !xpair_eqE.
+  rewrite !andbA.
+  rewrite <- andbA.
+  rewrite Bool.andb_diag.
+  destruct (X a0 == a).
+  destruct (Y a0 == b).
+  destruct (Z a0 == c).
+  all: simpl.
+  reflexivity.
+  reflexivity.
+  destruct (Z a0 == c).
+  simpl.
+  reflexivity.
+  simpl.
+  reflexivity.
+  reflexivity.
+  assumption.
+  assumption.
+
+  inversion Heq1.
+  clear H1.
+  rewrite can_move_cond_gen.
+  rewrite cond_not_match_arg_gen; try assumption.
+  rewrite cpr_eqE.
+  rewrite -> pfwd1_pairC.
+  unfold swap.
+  simpl.
+  rewrite -> pfwd1_pairA.
+  rewrite -> pfwd1_pairA. 
+  rewrite mult_zero_right.
+  rewrite eqr_divrMr.
+  rewrite mult_zero_left.
+  rewrite <- pfwd1_pairA.
+  rewrite <- pfwd1_pairA.
+  apply pfwd1_domin_RV1 with (TX := Z) (TY := [% X, Z, [% Y, Z]]).
+  rewrite <- pfwd1_pairA.
+  apply pfwd1_domin_RV1 with (TX := X) (TY := [% Z, [% Y, Z]]).
+  rewrite pfwd1_pairCA.
+  apply pfwd1_domin_RV1 with (TX := Y) (TY := [% Z, Z]).
+  apply same_RV_two_vals_gen.
+  assumption.
+  assumption.
+  
+  rewrite cond_not_match_arg_gen; try assumption.
+  rewrite mult_zero_left.
+  rewrite cpr_eqE.
+  rewrite eqr_divrMr.
+  rewrite mult_zero_left.
+  rewrite <- pfwd1_pairA.
+  rewrite <- pfwd1_pairA.
+  apply pfwd1_domin_RV1 with (TX := X) (TY := [% Z, [% Y, Z, Z]]).
+  rewrite -> pfwd1_pairCA.
+  rewrite <- pfwd1_pairA.
+  apply pfwd1_domin_RV1.
+  apply pfwd1_domin_RV1.
+  apply same_RV_two_vals_gen.
+  apply nesym.
+  assumption.
+  assumption.
+Qed.
+
 (* Lemma mut_indp_fn_cond_fns :
   forall {TA TB TD UA UB UD : finType}
   (X : {RV P -> TA}) (Y : {RV P -> TB}) (Z: {RV P -> TD})
@@ -1294,8 +1509,6 @@ Lemma pfwd1_comp_in_joint:
   `Pr[ [% (f `o  X), Z] = ((f x), z) ] = `Pr[ [% X, Z] = (x, z) ].
 Proof.
   intros.
-  Check pfwd1_comp.
-  Check eqP.
   (* unfold RV2. *)
   set g := (fun p:(TA * TD) => (f p.1, p.2)).
   assert (injective g).
@@ -1322,7 +1535,6 @@ Proof.
     reflexivity.
   rewrite <- H2.
   rewrite <- H3.
-  Check pfwd1_comp.
   rewrite -> pfwd1_comp with (f := g) (X := [% X, Z]) (a := (x, z)).
   reflexivity.
   assumption.
@@ -1352,7 +1564,6 @@ Proof.
   intros.
 
   have [Hzero | Hnonzero] := boolP (`Pr[(h `o Z) = c] == 0).
-    Check cpr_eq0_denom.
     move/eqP: Hzero => Hz'.
     rewrite !cpr_eq0_denom; try assumption.
     rewrite mult_zero_left.
@@ -1371,7 +1582,6 @@ Proof.
   rewrite !pfwd1_comp_in_joint; try assumption.
 
   rewrite [in RHS] pfwd1_pairC.
-  Check pfwd1_pairC.
   unfold swap.
   simpl.
   rewrite pfwd1_comp_in_joint; try assumption.
@@ -1386,15 +1596,12 @@ Proof.
   unfold swap.
   simpl.
   
-  Check cpr_eqE.
   rewrite <- cpr_eqE with (X := [% X, Z]) (Y := Z).
   rewrite <- cpr_eqE.
   unfold cinde_RV in H3.
   
-  Check pfwd1_pairA.
   rewrite <- pfwd1_pairA.
   rewrite pfwd1_comp_in_joint; try assumption.
-  Check pfwd1_pairA.
   rewrite -> pfwd1_pairA with (TX := [% X, Z]) (TY := (g `o [% Y, Z])) 
       (TZ := (h `o Z)) (a:= (xf, zf)).
   rewrite -> pfwd1_pairC with (TY := [% X, Z, (g `o [%Y, Z])]).
@@ -1407,7 +1614,6 @@ Proof.
   rewrite <- pfwd1_pairA.
   rewrite -> pfwd1_pairCA.
   rewrite pfwd1_comp_in_joint; try assumption.
-  Check pfwd1_pairCA.
   rewrite -> pfwd1_pairCA with (TX := [% Y, Z]) (TY := [% X, Z]) 
       (TZ := Z).
   rewrite -> pfwd1_pairA.
@@ -1416,7 +1622,6 @@ Proof.
   specialize (H3 (xf, zf) (yg, zg) z).
   exact H3.
 
-  Check no_fn_val_prob_zero.
   pose proof (no_fn_val_prob_zero Z _ _ Hhnotin).
   rewrite H4 in Hnonzero.
   move/eqP: Hnonzero.
@@ -1425,7 +1630,6 @@ Proof.
 
   pose proof (no_fn_val_prob_zero [% Y, Z] _ _ Hgnotin).
   rewrite !cpr_eqE.
-  Check pfwd1_domin_RV2.
   pose proof (pfwd1_domin_RV2 (h `o Z) c H4).
   pose proof (pfwd1_domin_RV1 (f `o [% X, Z]) a H5).
   rewrite H5.
@@ -1666,8 +1870,9 @@ Proof.
   assumption.
 Qed.
 
+(* TODO changed function statment, check nothing breaks *)
 Lemma same_singleton_sets: forall {A B : finType} (x : A) (y : B),
-  [set x] `* [set y] = [set (x, y)].
+  setX [set x] [set y] = [set (x, y)].
 Proof.
   intros.
   apply/setP => p.
@@ -1680,7 +1885,6 @@ Lemma mult_factor_in_sum: forall {TD: finType} (k : R) (z' : {set TD})
   \sum_(a <- enum z') (k * `Pr[Z = a]) = k * \sum_(a <- enum z') `Pr[Z = a].
 Proof.
   intros.
-  Check big_distrr.
   rewrite big_distrr.
   simpl.
   reflexivity.
@@ -1755,8 +1959,9 @@ Proof.
   reflexivity. *)
 Qed.
 
+(* setX change *)
 Lemma enum_pair_is_seq_pair: forall {TA TB : finType} (A : {set TA}) (B : {set TB}),
-  perm_eq [seq (i1, i2) | i1 <- enum A, i2 <- enum B] (enum (A `* B)).
+  perm_eq [seq (i1, i2) | i1 <- enum A, i2 <- enum B] (enum (setX A B)).
 Proof.
   intros.
   apply/uniq_perm.
@@ -1801,16 +2006,17 @@ Proof.
   reflexivity.
 Qed.
 
+(* setX change *)
 Lemma singleton_and_set_in_cond_seq: forall {TA TB : finType} (x : TA) 
   (z' : {set TB}),
-  perm_eq (enum ([set x] `* z')) [seq (x, i) | i <- enum z'].
+  perm_eq (enum (setX [set x] z')) [seq (x, i) | i <- enum z'].
 Proof.
   intros.
-  Check prod_enum.
+  (* Check prod_enum. *)
   (* apply/permP => true. *)
   apply/uniq_perm.
   apply enum_uniq.
-    Check map_inj_in_uniq.
+    (* Check map_inj_in_uniq. *)
     assert (uniq [seq (x, i)  | i <- enum z'] = uniq (enum z')).
       apply map_inj_in_uniq.
       move=> i j _ _ /=.
@@ -1831,7 +2037,6 @@ Proof.
   rewrite inE in Ha.
   move/eqP in Ha.
   rewrite Ha.
-  Check mem_map.
   rewrite mem_map.
   rewrite mem_enum.
   exact Hb.
@@ -1868,14 +2073,14 @@ Proof.
   contradiction.
 Qed.
 
+(* setX change *)
 Lemma singleton_and_set_in_cond_seq2: forall {TA TB : finType} (x : TA) 
   (z' : {set TB}),
-  perm_eq (enum (z' `* [set x])) [seq (i, x) | i <- enum z'].
+  perm_eq (enum (setX z' [set x])) [seq (i, x) | i <- enum z'].
 Proof.
   intros.
   apply/uniq_perm.
   apply enum_uniq.
-    Check map_inj_in_uniq.
     assert (uniq [seq (i, x)  | i <- enum z'] = uniq (enum z')).
       apply map_inj_in_uniq.
       move=> i j _ _ /=.
@@ -1927,22 +2132,20 @@ Proof.
   contradiction.
 Qed.
 
+(* setX change *)
 Lemma product_of_sums: forall {TA TB TC TD: finType} (A : {set TA})
   (B : {set TB}) (f : TA -> R) (g : TB -> R),
   (\sum_(a <- enum A) f a) * (\sum_(b <- enum B) g b) = 
-    \sum_(c <- enum (A `* B)) (f c.1) * (g c.2).
+    \sum_(c <- enum (setX A B)) (f c.1) * (g c.2).
 Proof.
   intros.
-  Check big_distrr.
   rewrite big_distrr.
   simpl.
-  Check big_distrl.
   assert (forall i, true -> (\sum_(a <- enum A)  f a) * g i = (\sum_(a <- enum A)  f a * g i)).
     intros.
     rewrite big_distrl.
     simpl.
     reflexivity.
-  Check eq_bigr.
   rewrite -> eq_bigr with (F2 := (fun i => \sum_(a <- enum A)  f a * g i)); try assumption.
   rewrite exchange_big.
   
@@ -1955,23 +2158,31 @@ Proof.
     intros.
     simpl.
     reflexivity.
-  rewrite <- big_allpairs in H1.
+  (* rewrite <- big_allpairs in H1. *)
+  (* rewrite -[LHS]big_allpairs in H1. *)
+  Check big_allpairs.
+  (* rewrite <- big_allpairs with 
+      (* (r1 := enum A) (r2 := enum B)  *)
+      (F := fun p : TA * TB => f p.1 * g p.2) in H1. *)
+  rewrite -[RHS](big_allpairs (r1 := enum A) (r2 := enum B) 
+      (F := fun p : TA * TB => f p.1 * g p.2)) in H1.
   simpl in H1.
   rewrite H1.
   apply perm_big.
   apply enum_pair_is_seq_pair.
 Qed.
 
+(* setX change *)
 Lemma removing_singleton_from_sum: forall {TA TB : finType} (x : TA) 
   (z' : {set TB}) (f : (TA * TB) -> R),
-  \sum_(i in [set x] `* z') f i = \sum_(i in z') f (x, i).
+  \sum_(i in (setX [set x] z')) f i = \sum_(i in z') f (x, i).
 Proof.
   intros.
-  rewrite <- big_enum.
-  rewrite <- big_enum.
+  rewrite -[RHS]big_enum.
+  rewrite -[LHS]big_enum.
   simpl.
   pose proof (singleton_and_set_in_cond_seq x z').
-  pose proof (perm_big (op := (GRing.GRing_add__canonical__Monoid_Law R)) (x := 0) ([seq (x, i)  | i <- enum z']) (F := f) (P := predT) H0).
+  pose proof (perm_big (op := (GRing.Algebra_add__canonical__Monoid_Law R)) (x := 0) ([seq (x, i)  | i <- enum z']) (F := f) (P := predT) H0).
   simpl in H1.
   rewrite H1.
   (* rewrite -> perm_big with (r2 := [seq (x, i) | i <- enum z']) (r1 := (enum ([set x] `* z'))).
@@ -1980,16 +2191,17 @@ Proof.
   reflexivity.
 Qed.
 
+(* setX change *)
 Lemma removing_singleton_from_sum2: forall {TA TB : finType} (x : TA) 
   (z' : {set TB}) (f : (TB * TA) -> R),
-  \sum_(i in z' `* [set x]) f i = \sum_(i in z') f (i, x).
+  \sum_(i in (setX z' [set x])) f i = \sum_(i in z') f (i, x).
 Proof.
   intros.
-  rewrite <- big_enum.
-  rewrite <- big_enum.
+  rewrite -big_enum.
+  rewrite -big_enum.
   simpl.
   pose proof (singleton_and_set_in_cond_seq2 x z').
-  pose proof (perm_big (op := (GRing.GRing_add__canonical__Monoid_Law R)) (x := 0) ([seq (i, x)  | i <- enum z']) (F := f) (P := predT) H0).
+  pose proof (perm_big (op := (GRing.Algebra_add__canonical__Monoid_Law R)) (x := 0) ([seq (i, x)  | i <- enum z']) (F := f) (P := predT) H0).
   simpl in H1.
   rewrite H1.
   rewrite big_map.
@@ -2070,6 +2282,7 @@ Proof.
   assumption.
 Qed.
 
+(* setX change *)
 Lemma pr_in_comp_sets_joint: forall {U : finType} {P0 : R.-fdist U}
   (A B D : finType) (X : {RV (P0) -> (A)}) (Y : {RV (P0) -> (D)})
   (f : A -> B) (b : B) (D': {set D}) (A' : {set A}),
@@ -2092,7 +2305,7 @@ Proof.
 
   (* Want `Pr[ g `o [% X, Y] \in blah] = Pr[ x \in A']*)
   rewrite <- H3.
-  rewrite -> pr_in_comp_sets with (f := g) (X := [% X, Y]) (A' := (A' `* D')).
+  rewrite -> pr_in_comp_sets with (f := g) (X := [% X, Y]) (A' := (setX A' D')).
   reflexivity.
 
   intros.
@@ -2137,17 +2350,17 @@ Qed.
 (* Print Assumptions pr_in_comp_sets_joint.
 Print Assumptions pfwd1_comp_sets. *)
 
+(* setX change *)
 Lemma pfwd1_comp_sets_joint: forall {U : finType} {P0 : R.-fdist U}
   (A B D : finType) (X : {RV (P0) -> (A)}) (Y : {RV (P0) -> (D)})
   (f : A -> B) (b : B) (d: D) (A' : {set A}),
   (forall (a : A), a \in A' -> f a = b) ->
   (forall (a : A), not (a \in A') -> f a != b) ->
-  `Pr[ [% (f `o  X), Y] = (b, d) ] = `Pr[ [% X, Y] \in (A' `* [set d]) ].
+  `Pr[ [% (f `o  X), Y] = (b, d) ] = `Pr[ [% X, Y] \in (setX A' [set d]) ].
 Proof.
   intros.
   pose proof (pr_in_comp_sets_joint A B D X Y f b [set d] A') H0 H1.
   rewrite <- H2.
-  Check pr_in1.
   rewrite <- pr_in1 with (X := [% f `o X, Y]).
   rewrite same_singleton_sets.
   reflexivity.
@@ -2168,24 +2381,21 @@ Proof.
   specialize (H0 x y).
   rewrite sets_are_sums.
   rewrite sets_are_sums.
-  Check big_distrr.
+  (* Check big_distrr. *)
   rewrite <- mult_factor_in_sum.
   assert (forall z : TD, true -> `Pr[ X = x ] * `Pr[ Y = y ] * `Pr[ Z = z ] = `Pr[ [% X, Y, Z] = (x, y, z) ]).
     intros.
     specialize (H0 z).
     assumption.
-  Check eq_bigr.
   rewrite -> eq_bigr with (F1 := (fun z => `Pr[ X = x ] * `Pr[ Y = y ] * `Pr[ Z = z ]))
       (F2 := (fun z => `Pr[ [% X, Y, Z] = (x, y, z) ])); try assumption.
-  Check big_map.
-  Check big_seq1.
+  (* Check big_map.
+  Check big_seq1. *)
 
-  Check big_enum.
   rewrite big_enum.
   rewrite big_enum.
   simpl.
   rewrite same_singleton_sets.
-  Check removing_singleton_from_sum.
   rewrite -> removing_singleton_from_sum with (x := (x, y)) (z' := z').
   reflexivity.
 Qed.
@@ -2246,6 +2456,7 @@ Proof.
   assumption.
 Qed.
 
+(* setX change *)
 Lemma cinde_RV_sets:
   forall {TA TB TD : finType}
   (X : {RV P -> TA}) (Y : {RV P -> TB}) (Z: {RV P -> TD}),
@@ -2275,11 +2486,9 @@ Proof.
   rewrite <- div_factor_in_sum.
   rewrite big_enum.
   simpl.
-  Check removing_singleton_from_sum2.
-  rewrite -> removing_singleton_from_sum2 with (z' := A `* B) (x := c).
-  rewrite <- big_enum.
+  rewrite -> removing_singleton_from_sum2 with (z' := setX A B) (x := c).
+  rewrite -big_enum.
   simpl.
-  Check eq_bigr.
   rewrite -> eq_bigr with (F1 := (fun i => `Pr[ [% X, Y, Z] = (i.1, i.2, c) ] / `Pr[ Z = c ]))
       (F2 := (fun i => `Pr[ [% X, Z] = (i.1, c) ] / `Pr[ Z = c ] * (`Pr[ [% Y, Z] = (i.2, c) ] / `Pr[ Z = c ]))); try assumption.
   
@@ -2290,9 +2499,69 @@ Proof.
   rewrite [in RHS] big_enum.
   simpl.
   rewrite -> removing_singleton_from_sum2 with (z' := A) (x := c).
-  rewrite <- big_enum.
+  rewrite -big_enum.
   simpl.
-  assert ((\sum_(a <- enum (B `* [set c])) `Pr[ [% Y, Z] = a ] / `Pr[ Z = c ]) = 
+  assert ((\sum_(a <- enum (setX B [set c])) `Pr[ [% Y, Z] = a ] / `Pr[ Z = c ]) = 
+      (\sum_(a <- enum B) `Pr[ [% Y, Z] = (a, c) ] / `Pr[ Z = c ])).
+    intros.
+    rewrite big_enum.
+    rewrite -> removing_singleton_from_sum2 with (z' := B) (x := c).
+    rewrite big_enum.
+    simpl.
+    reflexivity.
+  rewrite H2.
+  clear H2.
+
+  rewrite product_of_sums; try assumption.
+  reflexivity.
+Qed.
+
+(* setX change *)
+Lemma cinde_RV_sets_gen:
+  forall {TA TB TD UU : finType} {P' : R.-fdist(UU)}
+  (X : {RV P' -> TA}) (Y : {RV P' -> TB}) (Z: {RV P' -> TD}),
+  X _|_ Y | Z ->
+  (forall A B c,
+    `Pr[ [% X, Y] \in (A `* B) | Z = c ] =
+    `Pr[ X \in A | Z = c ] *
+    `Pr[ Y \in B | Z = c ]).
+Proof.
+  intros.
+  unfold cinde_RV in H0.
+  rewrite cpr_inEdiv.
+  rewrite cpr_inEdiv.
+  rewrite cpr_inEdiv.
+
+  assert (forall (i : TA * TB), true ->
+      `Pr[ [% X, Y, Z] = (i.1, i.2, c)] / `Pr[ Z = c ] =
+      `Pr[ [% X, Z] = (i.1, c)] / `Pr[ Z = c ] * (`Pr[ [% Y, Z] = (i.2, c)] / `Pr[ Z = c ])).
+    intros.
+    destruct i as [a b].
+    specialize (H0 a b c).
+    rewrite !cpr_eqE in H0.
+    assumption.
+
+  rewrite sets_are_sums.
+  rewrite pr_in1.
+  rewrite <- div_factor_in_sum.
+  rewrite big_enum.
+  simpl.
+  rewrite -> removing_singleton_from_sum2 with (z' := setX A B) (x := c).
+  rewrite -big_enum.
+  simpl.
+  rewrite -> eq_bigr with (F1 := (fun i => `Pr[ [% X, Y, Z] = (i.1, i.2, c) ] / `Pr[ Z = c ]))
+      (F2 := (fun i => `Pr[ [% X, Z] = (i.1, c) ] / `Pr[ Z = c ] * (`Pr[ [% Y, Z] = (i.2, c) ] / `Pr[ Z = c ]))); try assumption.
+  
+  rewrite sets_are_sums.
+  rewrite <- div_factor_in_sum.
+  rewrite sets_are_sums.
+  rewrite <- div_factor_in_sum.
+  rewrite [in RHS] big_enum.
+  simpl.
+  rewrite -> removing_singleton_from_sum2 with (z' := A) (x := c).
+  rewrite -big_enum.
+  simpl.
+  assert ((\sum_(a <- enum (setX B [set c])) `Pr[ [% Y, Z] = a ] / `Pr[ Z = c ]) = 
       (\sum_(a <- enum B) `Pr[ [% Y, Z] = (a, c) ] / `Pr[ Z = c ])).
     intros.
     rewrite big_enum.
@@ -2319,9 +2588,104 @@ Proof.
   intros.
 
   have [Hzero | Hnonzero] := boolP (`Pr[Z = c] == 0).
-    Check cpr_eq0_denom.
     move/eqP: Hzero => Hz'.
     rewrite !cpr_eq0_denom; try assumption.
+    rewrite mult_zero_left.
+    reflexivity.
+
+  pose proof (set_A'_always_exists f a).
+  pose proof (set_A'_always_exists g b).
+  case: H1 => Af [Hf0 Hf1].
+  case: H2 => Ag [Hg0 Hg1].
+
+  rewrite !cpr_eqE.
+  rewrite -> pfwd1_comp_sets_joint with (A' := Af); try assumption.
+  rewrite -> pfwd1_comp_sets_joint with (A' := Ag); try assumption.
+
+  rewrite <- pr_in1.
+  rewrite <- cpr_inEdiv.
+  rewrite <- cpr_inEdiv.
+
+  rewrite <- pfwd1_pairA.
+  (* rewrite <- pr_in_pairA with (X := (f `o [% X, Z])) (Y := (g `o [% Y, Z])) (Z := Z) (). *)
+  rewrite -> pfwd1_comp_sets_joint with (A' := Af) (f := f) (X := [% X, Z]) (Y := [% g `o [% Y, Z], Z]); try assumption.
+  assert (setX Af [set (b, c)] = setX Af ([set b] `* [set c])).
+    pose proof (same_singleton_sets b c).
+    rewrite H1.
+    reflexivity.
+  rewrite H1.
+  rewrite -> pr_in_pairCA with (X := [% X, Z]) (Y := (g `o [% Y, Z])) (Z := Z).
+  rewrite -> pr_in_comp_sets_joint with (X := [% Y, Z]) (Y := [% X, Z, Z]) (A' := Ag); try assumption.
+  rewrite <- pr_in_pairCA with (X := [% X, Z]) (Y := [% Y, Z]) (Z := Z).
+  rewrite -> pr_in_pairA with (X := [% X, Z]) (Y := [% Y, Z]) (Z := Z).
+  rewrite <- cpr_inEdiv.
+
+  apply cinde_RV_sets.
+  assumption.
+Qed.
+
+Lemma cinde_fn_transform_gen:
+  forall {TA TB TD UA UB UU : finType} {P' : R.-fdist(UU)}
+  (X : {RV P' -> TA}) (Y : {RV P' -> TB}) (Z: {RV P' -> TD})
+  (f : (TA*TD) -> UA) (g : (TB*TD) -> UB),
+  [% X, Z] _|_ [% Y, Z ] | Z ->
+  f `o [% X, Z] _|_ g `o [% Y, Z ] | Z.
+Proof.
+  intros.
+  unfold cinde_RV.
+  intros.
+
+  have [Hzero | Hnonzero] := boolP (`Pr[Z = c] == 0).
+    move/eqP: Hzero => Hz'.
+    rewrite !cpr_eq0_denom_gen; try assumption.
+    rewrite mult_zero_left.
+    reflexivity.
+
+  pose proof (set_A'_always_exists f a).
+  pose proof (set_A'_always_exists g b).
+  case: H1 => Af [Hf0 Hf1].
+  case: H2 => Ag [Hg0 Hg1].
+
+  rewrite !cpr_eqE.
+  rewrite -> pfwd1_comp_sets_joint with (A' := Af); try assumption.
+  rewrite -> pfwd1_comp_sets_joint with (A' := Ag); try assumption.
+
+  rewrite <- pr_in1.
+  rewrite <- cpr_inEdiv.
+  rewrite <- cpr_inEdiv.
+
+  rewrite <- pfwd1_pairA.
+  (* rewrite <- pr_in_pairA with (X := (f `o [% X, Z])) (Y := (g `o [% Y, Z])) (Z := Z) (). *)
+  rewrite -> pfwd1_comp_sets_joint with (A' := Af) (f := f) (X := [% X, Z]) (Y := [% g `o [% Y, Z], Z]); try assumption.
+  assert (setX Af [set (b, c)] = setX Af ([set b] `* [set c])).
+    pose proof (same_singleton_sets b c).
+    rewrite H1.
+    reflexivity.
+  rewrite H1.
+  rewrite -> pr_in_pairCA with (X := [% X, Z]) (Y := (g `o [% Y, Z])) (Z := Z).
+  rewrite -> pr_in_comp_sets_joint with (X := [% Y, Z]) (Y := [% X, Z, Z]) (A' := Ag); try assumption.
+  rewrite <- pr_in_pairCA with (X := [% X, Z]) (Y := [% Y, Z]) (Z := Z).
+  rewrite -> pr_in_pairA with (X := [% X, Z]) (Y := [% Y, Z]) (Z := Z).
+  rewrite <- cpr_inEdiv.
+
+  apply cinde_RV_sets_gen.
+  assumption.
+Qed.
+
+(* Lemma cinde_fn_transform_gen_no_pairs:
+  forall {TA TB TD UA UB UU : finType} {P' : R.-fdist(UU)}
+  (X : {RV P' -> TA}) (Y : {RV P' -> TB}) (Z: {RV P' -> TD})
+  (f : (TA*TD) -> UA) (g : (TB*TD) -> UB),
+  X _|_ Y | Z ->
+  f `o X _|_ g `o Y | Z.
+Proof.
+  intros.
+  unfold cinde_RV.
+  intros.
+
+  have [Hzero | Hnonzero] := boolP (`Pr[Z = c] == 0).
+    move/eqP: Hzero => Hz'.
+    rewrite !cpr_eq0_denom_gen; try assumption.
     rewrite mult_zero_left.
     reflexivity.
 
@@ -2352,9 +2716,10 @@ Proof.
   rewrite -> pr_in_pairA with (X := [% X, Z]) (Y := [% Y, Z]) (Z := Z).
   rewrite <- cpr_inEdiv.
 
-  apply cinde_RV_sets.
+  apply cinde_RV_sets_gen.
   assumption.
-Qed.
+Qed. *)
+
 
 (* Print Assumptions cinde_RV_sets.
 Print Assumptions set_A'_always_exists. *)
@@ -2451,7 +2816,6 @@ Proof.
   (* apply change_non_zero_condition in H1.
   inversion H1. *)
   apply doint_equiv_with_confounder_prob_wo_indp_wo_inj; try assumption.
-  Check cpr_eq0_denom.
   have [Hzero | Hnonzero] := boolP (`Pr[Cnodefn =  c] == 0).
     move/eqP: Hzero => Hz'.
     apply cpr_eq0_denom with (X := Tnodefn) (a := t) in Hz'.
@@ -2534,7 +2898,7 @@ Proof.
     unfold g.
     reflexivity.
   rewrite H1.
-  Check mem_imset.
+  (* Check mem_imset. *)
   (* exists (Y y).
   unfold preim.
   Check image_f.
@@ -2557,7 +2921,6 @@ Proof.
   rewrite confounder_rewrite_within_sum; try assumption.
   rewrite <- pr_in1.
   rewrite pr_inE.
-  Check total_prob_cond.
   (* eapply total_prob_cond. *)
   rewrite -> total_prob_cond with (I := outcomes) 
       (F := fun c => Cnodefn @^-1: [set c]).
@@ -2689,6 +3052,18 @@ Proof.
   rewrite <- marginalize.
   reflexivity.
 Qed.
+
+
+
+Lemma three_var_confounder_backdoor_adjustment': forall t,      
+  mutual_indep_three UHRV UTRV UCRV ->
+  (forall c, `Pr[ Tnodefn = t | Cnodefn = c ] != 0) ->
+  (forall h, `Pr[ (Hnodefnint t) = h] =  
+  \sum_(c : outcomes) (`Pr[Hnodefn = h | [%Tnodefn, Cnodefn] = (t, c)] * 
+      `Pr[ Cnodefn = c ])).
+Proof.
+Admitted.
+
 
 
 
@@ -2842,7 +3217,6 @@ Proof.
   unfold Cinterv.
   unfold Tnodefn.
   unfold T.
-  Check inde_RV_comp.
   (* apply inde_RV_comp. *)
   (* Check (Hnodefnint t). *)
   (* pose proof (inde_RV_comp _ _ UH UT _ _ UHRV UTRV (fun u => fH u t) (fun u => fT u) H0). *)
@@ -3051,7 +3425,7 @@ End ThreeVarColliderExample.
 
 
 
-
+(* 
 Section FourVarConfounderExample.
 (* Graph :  C <- C' -> H
             T <- C -> H
@@ -3353,4 +3727,4 @@ Variable H T C h1 h2 t c.
 
 
 
-End GeneralTake2.
+End GeneralTake2. *)

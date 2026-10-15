@@ -1,4 +1,4 @@
--R . project
+-Q Backdoor project
 -R frap Frap
 -R /home/giniya/.opam/infoth/lib/coq/user-contrib/infotheo infotheo
 # -R causal_models_formalization annacausal
@@ -24,7 +24,8 @@
 # DAGs/Adjacency.v
 # DAGs/TopologicalSort.v
 # CausalDiagrams/Assignments.v
-# CausalDiagrams/IntermediateNodes.v
+# CausalMDiagrams/IntermediateNodes.v
+# causal_models_formalization/CausalDiagrams/IntermediateNodes.v
 # CausalDiagrams/CausalPaths.v
 # CausalDiagrams/DSeparation.v
 # CausalDiagrams/UnblockedAncestors.v
@@ -44,5 +45,6 @@
 # Semantics/EquateValues.v
 # Semantics/ChangeOrigUnbAnc.v
 # Semantics/SemanticDSepEquiv.v
-TwoVarThreeVarExamples.v
-GeneralParentalAdj.v
+Backdoor/TwoVarThreeVarExamples.v
+Backdoor/GeneralParentalAdj.v
+Backdoor/TZDSep.v

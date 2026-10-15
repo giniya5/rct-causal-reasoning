@@ -1,6 +1,6 @@
 From CausalDiagrams Require Import IntermediateNodes.
 From CausalDiagrams Require Import DSeparation.
-From project Require Import TZDSep.
+From project Require Import DSepTZ.
 From DAGs Require Import Basics.
 From DAGs Require Import CycleDetection.
 From DAGs Require Import Descendants.

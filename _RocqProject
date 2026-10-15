@@ -47,4 +47,4 @@
 # Semantics/SemanticDSepEquiv.v
 Backdoor/TwoVarThreeVarExamples.v
 Backdoor/GeneralParentalAdj.v
-Backdoor/TZDSep.v
+Backdoor/DSepTZ.v
